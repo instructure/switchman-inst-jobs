@@ -1,0 +1,22 @@
+dist: trusty
+sudo: false
+language: ruby
+cache: bundler
+
+rvm:
+  - 2.3
+  - 2.4
+
+gemfile:
+  - spec/gemfiles/rails-4.2.gemfile
+  - spec/gemfiles/rails-5.0.gemfile
+
+addons:
+  postgresql: '9.5'
+
+install: bundle install --jobs 3
+
+script:
+  - sh -c "if [ '$TRAVIS_RUBY_VERSION' = '2.4' ] && [ '$BUNDLE_GEMFILE' = 'spec/gemfiles/rails-5.0.gemfile' ]; then bundle exec rubocop --fail-level autocorrect; fi"
+  - bundle exec rake db:create db:migrate
+  - bundle exec rake spec

@@ -1,0 +1,15 @@
+/coverage/
+/doc/
+/Dockerfile
+/docker-compose.yml
+/docker-compose.override.example.yml
+/docker-compose.override.yml
+/Gemfile.lock
+/log/
+/pkg/
+/spec/gemfiles/.bundle/
+/spec/dummy/log/
+/spec/dummy/tmp/
+/spec/gemfiles/*.gemfile.lock
+/switchman-inst-jobs-*.gem
+/tmp/
