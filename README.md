@@ -4,6 +4,7 @@ If you are using the [Switchman](https://github.com/instructure/switchman) and
 [Instructure Jobs](https://github.com/instructure/inst-jobs) gems in your
 application, simply include this gem to make background jobs aware of sharding.
 
+Testing
 
 ## Requirements
 
