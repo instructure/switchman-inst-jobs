@@ -14,9 +14,10 @@ gemfile:
 addons:
   postgresql: '9.5'
 
+before_install: gem update bundler
 install: bundle install --jobs 3
 
 script:
-  - sh -c "if [ '$TRAVIS_RUBY_VERSION' = '2.4' ] && [ '$BUNDLE_GEMFILE' = 'spec/gemfiles/rails-5.0.gemfile' ]; then bundle exec rubocop --fail-level autocorrect; fi"
+  - bash -c "if [ '$TRAVIS_RUBY_VERSION' = '2.4' ] && [[ '$BUNDLE_GEMFILE' == *'rails-5.0'* ]]; then bundle exec rubocop --fail-level autocorrect; fi"
   - bundle exec rake db:create db:migrate
   - bundle exec rake spec

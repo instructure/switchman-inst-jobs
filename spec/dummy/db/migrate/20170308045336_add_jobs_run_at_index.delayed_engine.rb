@@ -7,7 +7,7 @@ class AddJobsRunAtIndex < ActiveRecord::Migration
   end
 
   def up
-    add_index :delayed_jobs, %w(run_at tag), algorithm: :concurrently
+    add_index :delayed_jobs, %w[run_at tag], algorithm: :concurrently
   end
 
   def down

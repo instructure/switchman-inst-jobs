@@ -26,8 +26,8 @@ class OptimizeDelayedJobs < ActiveRecord::Migration
     remove_index :delayed_jobs, name: 'get_delayed_jobs_index'
     remove_index :delayed_jobs, [:strand]
 
-    add_index :delayed_jobs, %w(run_at queue locked_at strand priority), name: 'index_delayed_jobs_for_get_next'
-    add_index :delayed_jobs, %w(strand id), name: 'index_delayed_jobs_on_strand'
+    add_index :delayed_jobs, %w[run_at queue locked_at strand priority], name: 'index_delayed_jobs_for_get_next'
+    add_index :delayed_jobs, %w[strand id], name: 'index_delayed_jobs_on_strand'
 
     # move all failed jobs to the new failed table
     Delayed::Backend::ActiveRecord::Job.where('failed_at IS NOT NULL').find_each do |job|

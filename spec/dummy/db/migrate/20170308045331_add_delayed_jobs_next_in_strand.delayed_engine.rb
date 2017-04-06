@@ -48,6 +48,6 @@ class AddDelayedJobsNextInStrand < ActiveRecord::Migration
 
     remove_column :delayed_jobs, :next_in_strand
     remove_index :delayed_jobs, name: 'get_delayed_jobs_index'
-    add_index :delayed_jobs, %w(run_at queue locked_at strand priority), name: 'index_delayed_jobs_for_get_next'
+    add_index :delayed_jobs, %w[run_at queue locked_at strand priority], name: 'index_delayed_jobs_for_get_next'
   end
 end
