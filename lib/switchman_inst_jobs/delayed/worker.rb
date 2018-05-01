@@ -5,6 +5,16 @@ module SwitchmanInstJobs
         base.singleton_class.prepend(ClassMethods)
       end
 
+      def initialize(options = {})
+        # have to initialize this first, so #shard works
+        @config = options
+        ::Delayed::Worker::HealthCheck.munge_service_name(shard) do
+          super
+          # ensure to instantiate with the munged config
+          health_check
+        end
+      end
+
       def start
         shard.activate(:delayed_jobs) { super }
       end

@@ -49,4 +49,20 @@ describe SwitchmanInstJobs::Switchman::Shard do
       end.to change { ::Switchman::Shard.count }.by 1
     end
   end
+
+  describe '.delayed_jobs_shards' do
+    before { Switchman::Shard.instance_variable_set(:@delayed_jobs_shards, nil) }
+    after { Switchman::Shard.instance_variable_set(:@delayed_jobs_shards, nil) }
+
+    it "returns just the default shard when there's no other config" do
+      expect(Switchman::Shard.delayed_jobs_shards).to eq [Switchman::Shard.default]
+    end
+
+    it "returns a referenced shard" do
+      shard1 = Switchman::Shard.create!
+      shard2 = Switchman::Shard.create!
+      shard1.update_attribute(:delayed_jobs_shard_id, shard2.id)
+      expect(Switchman::Shard.delayed_jobs_shards).to eq [Switchman::Shard.default, shard2].sort
+    end
+  end
 end

@@ -23,6 +23,8 @@ Gem::Specification.new do |s|
   s.add_dependency 'switchman', '>= 1.9.7', '< 1.13'
 
   s.add_development_dependency 'bundler', '~> 1.15'
+  s.add_development_dependency 'byebug'
+  s.add_development_dependency 'imperium'
   s.add_development_dependency 'pg', '~> 0'
   s.add_development_dependency 'pry', '~> 0'
   s.add_development_dependency 'rake', '~> 12.0'

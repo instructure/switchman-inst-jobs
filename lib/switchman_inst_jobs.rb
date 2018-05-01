@@ -19,6 +19,7 @@ module SwitchmanInstJobs
     ::Delayed::Backend::Redis::Job.column :shard_id, :integer
     ::Delayed::Pool.prepend Delayed::Pool
     ::Delayed::Worker.prepend Delayed::Worker
+    ::Delayed::Worker::HealthCheck.prepend Delayed::Worker::HealthCheck
     ::Object.include Delayed::MessageSending
   end
 
@@ -39,6 +40,7 @@ require 'switchman_inst_jobs/delayed/backend/base'
 require 'switchman_inst_jobs/delayed/message_sending'
 require 'switchman_inst_jobs/delayed/pool'
 require 'switchman_inst_jobs/delayed/worker'
+require 'switchman_inst_jobs/delayed/worker/health_check'
 require 'switchman_inst_jobs/railtie'
 require 'switchman_inst_jobs/shackles'
 require 'switchman_inst_jobs/switchman/database_server'

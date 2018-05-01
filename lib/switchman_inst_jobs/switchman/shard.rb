@@ -14,7 +14,7 @@ module SwitchmanInstJobs
           shard = ::Switchman::Shard.lookup(delayed_jobs_shard_id)
           return shard if shard
         end
-        database_server.try(:delayed_jobs_shard, self)
+        database_server&.delayed_jobs_shard(self)
       end
 
       module ClassMethods
@@ -50,6 +50,22 @@ module SwitchmanInstJobs
         def create
           db = ::Switchman::DatabaseServer.server_for_new_shard
           db.create_new_shard
+        end
+
+        def delayed_jobs_shards
+          @delayed_jobs_shards ||= begin
+            db_dj_shards = ::Switchman::DatabaseServer.all.map do |db|
+              next db.shards.to_a if db.config[:delayed_jobs_shard] == 'self'
+              db.delayed_jobs_shard
+            end.compact.flatten.uniq # yes, all three
+            shard_dj_shards = ::Switchman::Shard.
+                where.not(delayed_jobs_shard_id: nil).
+                distinct.
+                pluck(:delayed_jobs_shard_id).
+                map { |id| ::Switchman::Shard.lookup(id) }.
+                compact
+            (db_dj_shards + shard_dj_shards).uniq.sort
+          end
         end
       end
     end
