@@ -1,5 +1,5 @@
 # This migration comes from delayed_engine (originally 20110531144916)
-class CleanupDelayedJobsIndexes < ActiveRecord::Migration
+class CleanupDelayedJobsIndexes < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Backend::ActiveRecord::Job.connection
   end

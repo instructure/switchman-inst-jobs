@@ -1,5 +1,5 @@
 # This migration comes from delayed_engine (originally 20120510004759)
-class DelayedJobsDeleteTriggerLockForUpdate < ActiveRecord::Migration
+class DelayedJobsDeleteTriggerLockForUpdate < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Backend::ActiveRecord::Job.connection
   end

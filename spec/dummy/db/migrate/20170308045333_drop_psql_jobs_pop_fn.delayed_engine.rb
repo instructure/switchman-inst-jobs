@@ -1,5 +1,5 @@
 # This migration comes from delayed_engine (originally 20120531150712)
-class DropPsqlJobsPopFn < ActiveRecord::Migration
+class DropPsqlJobsPopFn < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Backend::ActiveRecord::Job.connection
   end

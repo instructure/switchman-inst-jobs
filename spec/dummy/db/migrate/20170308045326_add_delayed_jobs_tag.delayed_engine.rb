@@ -1,5 +1,5 @@
 # This migration comes from delayed_engine (originally 20110208031356)
-class AddDelayedJobsTag < ActiveRecord::Migration
+class AddDelayedJobsTag < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Backend::ActiveRecord::Job.connection
   end

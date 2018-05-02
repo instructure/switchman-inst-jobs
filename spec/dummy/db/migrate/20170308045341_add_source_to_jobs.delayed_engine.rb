@@ -1,5 +1,5 @@
 # This migration comes from delayed_engine (originally 20140512213941)
-class AddSourceToJobs < ActiveRecord::Migration
+class AddSourceToJobs < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Job.connection
   end

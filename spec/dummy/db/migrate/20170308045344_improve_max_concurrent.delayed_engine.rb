@@ -1,5 +1,5 @@
 # This migration comes from delayed_engine (originally 20151210162949)
-class ImproveMaxConcurrent < ActiveRecord::Migration
+class ImproveMaxConcurrent < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Job.connection
   end

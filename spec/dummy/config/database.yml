@@ -3,6 +3,6 @@ test:
   database: test<%= ENV['TEST_ENV_NUMBER'] %>
   pool: 1
   timeout: 5000
-  username: <%= ENV.fetch('DB_USERNAME', 'postgres') %>
+  username: <%= ENV.fetch('DB_USERNAME', '') %>
   password: <%= ENV.fetch('DB_PASSWORD', '') %>
-  host: <%= ENV.fetch('DB_HOST', 'localhost') %>
+  host: <%= ENV.fetch('DB_HOST', '') %>

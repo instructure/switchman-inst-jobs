@@ -1,4 +1,4 @@
-class AddShardIdToDelayedJobs < ActiveRecord::Migration
+class AddShardIdToDelayedJobs < ActiveRecord::Migration[4.2]
   disable_ddl_transaction!
 
   def connection

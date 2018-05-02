@@ -12,19 +12,15 @@ module Dummy
     # Do not swallow errors in after_commit/after_rollback callbacks.
     if Rails.version < '5'
       config.active_record.raise_in_transactional_callbacks = true
+
+      class ActiveRecord::Migration
+        def self.[](version)
+          self
+        end
+      end
     end
 
     config.active_record.dump_schema_after_migration = false
-
-    # Kill the ActiveRecord::Migration inheritance deprecation warning.
-    if Rails.version >= '5'
-      module Migration
-        def migrate(*args)
-          ActiveRecord::Migration.instance_method(:migrate).bind(self).call(*args)
-        end
-      end
-      ActiveRecord::Migration::Compatibility::Legacy.prepend Migration
-    end
 
     # Add our switchman-inst-jobs gem migrations. It's important that these are
     # absolute paths since Switchman won't run them relative to the dummy root.

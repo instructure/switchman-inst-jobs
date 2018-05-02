@@ -1,5 +1,5 @@
 # This migration comes from delayed_engine (originally 20120607164022)
-class DelayedJobsUseAdvisoryLocks < ActiveRecord::Migration
+class DelayedJobsUseAdvisoryLocks < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Backend::ActiveRecord::Job.connection
   end

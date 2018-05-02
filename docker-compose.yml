@@ -6,6 +6,7 @@ services:
     build: .
     environment:
       DB_HOST: postgres
+      DB_USERNAME: postgres
       RAILS_ENV: test
     links:
       - postgres

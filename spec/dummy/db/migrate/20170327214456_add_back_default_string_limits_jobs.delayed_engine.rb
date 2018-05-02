@@ -1,5 +1,5 @@
 # This migration comes from delayed_engine (originally 20161206323555)
-class AddBackDefaultStringLimitsJobs < ActiveRecord::Migration
+class AddBackDefaultStringLimitsJobs < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Job.connection
   end

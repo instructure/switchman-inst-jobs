@@ -10,7 +10,8 @@ rvm:
 gemfile:
   - spec/gemfiles/rails-4.2.gemfile
   - spec/gemfiles/rails-5.0.gemfile
-#  - spec/gemfiles/rails-5.1.gemfile
+  - spec/gemfiles/rails-5.1.gemfile
+  - spec/gemfiles/rails-5.2.gemfile
 
 addons:
   postgresql: '9.5'
@@ -23,3 +24,4 @@ script:
   - bash -c "if [ '$TRAVIS_RUBY_VERSION' = '2.4' ] && [[ '$BUNDLE_GEMFILE' == *'rails-5.0'* ]]; then bundle exec rubocop --fail-level autocorrect; fi"
   - bundle exec rake db:create db:migrate
   - bundle exec rake spec
+  - bundle exec rake db:drop

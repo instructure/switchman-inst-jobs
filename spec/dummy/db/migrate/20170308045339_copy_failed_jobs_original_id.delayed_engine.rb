@@ -1,5 +1,5 @@
 # This migration comes from delayed_engine (originally 20140505215510)
-class CopyFailedJobsOriginalId < ActiveRecord::Migration
+class CopyFailedJobsOriginalId < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Backend::ActiveRecord::Job.connection
   end
