@@ -1,4 +1,13 @@
 module SwitchmanInstJobs
+  class ShardNotFoundError < RuntimeError
+    attr_reader :shard_id
+
+    def initialize(shard_id)
+      @shard_id = shard_id
+      super("Shard not found: #{shard_id}")
+    end
+  end
+
   module Delayed
     module Backend
       module Base
@@ -37,14 +46,14 @@ module SwitchmanInstJobs
         end
 
         def deserialize(source)
-          raise "Shard not found: #{shard_id}" unless current_shard
+          raise ShardNotFoundError, shard_id unless current_shard
           current_shard.activate { super }
         rescue ::Switchman::ConnectionError, PG::ConnectionBad, PG::UndefinedTable
           # likely a missing shard with a stale cache
           current_shard.send(:clear_cache)
           ::Switchman::Shard.clear_cache
           unless ::Switchman::Shard.where(id: shard_id).exists?
-            raise "Shard not found: #{shard_id}"
+            raise ShardNotFoundError, shard_id
           end
           raise
         end
