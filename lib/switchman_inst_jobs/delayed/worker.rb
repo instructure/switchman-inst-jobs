@@ -10,8 +10,8 @@ module SwitchmanInstJobs
         @config = options
         ::Delayed::Worker::HealthCheck.munge_service_name(shard) do
           super
-          # ensure to instantiate with the munged config
-          health_check
+          # ensure we get our own copy of the munged config
+          @health_check_config = @health_check_config.dup
         end
       end
 
