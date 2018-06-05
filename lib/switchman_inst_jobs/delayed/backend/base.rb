@@ -25,6 +25,22 @@ module SwitchmanInstJobs
               super(object, enqueue_options)
             end
           end
+
+          def configured_shard_ids
+            (::Delayed::Settings.worker_config.try(:[], "workers") || []).map{|w| w["shard"]}.compact.uniq
+          end
+
+          def processes_running_locally
+            shard_ids = configured_shard_ids
+            if shard_ids.any?
+              shards = shard_ids.map { |shard_id| ::Delayed::Worker.shard(shard_id) }
+              ::Switchman::Shard.with_each_shard(shards, [:delayed_jobs]) do
+                super
+              end
+            else
+              super
+            end
+          end
         end
 
         def self.prepended(base)
