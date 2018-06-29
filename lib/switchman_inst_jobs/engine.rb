@@ -1,5 +1,7 @@
 module SwitchmanInstJobs
-  class Railtie < Rails::Railtie
+  class Engine < ::Rails::Engine
+    isolate_namespace SwitchmanInstJobs
+
     initializer 'sharding.active_record',
                 after: 'switchman.extend_connection_adapters' do
       SwitchmanInstJobs.initialize_active_record

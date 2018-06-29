@@ -28,10 +28,5 @@ module Dummy
       config.root.join('db/migrate'),
       config.root.join('../../db/migrate')
     ]
-    # Also configure the paths for db:migrate task.
-    config.paths['db/migrate'] = [
-      config.root.join('db/migrate'),
-      config.root.join('../../db/migrate')
-    ]
   end
 end

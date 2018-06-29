@@ -1,5 +1,4 @@
 require 'inst-jobs'
-require 'rails/railtie'
 require 'switchman'
 
 module SwitchmanInstJobs
@@ -41,7 +40,7 @@ require 'switchman_inst_jobs/delayed/message_sending'
 require 'switchman_inst_jobs/delayed/pool'
 require 'switchman_inst_jobs/delayed/worker'
 require 'switchman_inst_jobs/delayed/worker/health_check'
-require 'switchman_inst_jobs/railtie'
+require 'switchman_inst_jobs/engine'
 require 'switchman_inst_jobs/shackles'
 require 'switchman_inst_jobs/switchman/database_server'
 require 'switchman_inst_jobs/switchman/default_shard'
