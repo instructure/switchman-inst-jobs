@@ -1,4 +1,8 @@
-#!/bin/bash -ex
+#!/usr/bin/env bash
+
+set -ex
+
+export COMPOSE_FILE="docker-compose.yml"
 
 function cleanup() {
   exit_code=$?

@@ -27,7 +27,8 @@ module SwitchmanInstJobs
           end
 
           def configured_shard_ids
-            (::Delayed::Settings.worker_config.try(:[], "workers") || []).map{|w| w["shard"]}.compact.uniq
+            (::Delayed::Settings.worker_config.try(:[], 'workers') || [])
+              .map { |w| w['shard'] }.compact.uniq
           end
 
           def processes_locked_locally
@@ -68,9 +69,7 @@ module SwitchmanInstJobs
           # likely a missing shard with a stale cache
           current_shard.send(:clear_cache)
           ::Switchman::Shard.clear_cache
-          unless ::Switchman::Shard.where(id: shard_id).exists?
-            raise ShardNotFoundError, shard_id
-          end
+          raise ShardNotFoundError, shard_id unless ::Switchman::Shard.where(id: shard_id).exists?
           raise
         end
       end

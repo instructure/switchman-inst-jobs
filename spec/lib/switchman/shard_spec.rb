@@ -58,7 +58,7 @@ describe SwitchmanInstJobs::Switchman::Shard do
       expect(Switchman::Shard.delayed_jobs_shards).to eq [Switchman::Shard.default]
     end
 
-    it "returns a referenced shard" do
+    it 'returns a referenced shard' do
       shard1 = Switchman::Shard.create!
       shard2 = Switchman::Shard.create!
       shard1.update_attribute(:delayed_jobs_shard_id, shard2.id)

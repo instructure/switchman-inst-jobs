@@ -1,4 +1,4 @@
-require File.expand_path('../boot', __FILE__)
+require File.expand_path('boot', __dir__)
 
 require 'rails/all'
 Bundler.require(*Rails.groups)
@@ -7,14 +7,14 @@ require 'switchman_inst_jobs'
 
 module Dummy
   class Application < Rails::Application
-    config.root = File.expand_path('../..', __FILE__)
+    config.root = File.expand_path('..', __dir__)
 
     # Do not swallow errors in after_commit/after_rollback callbacks.
     if Rails.version < '5'
       config.active_record.raise_in_transactional_callbacks = true
 
-      class ActiveRecord::Migration
-        def self.[](version)
+      class ActiveRecord::Migration # rubocop:disable Style/ClassAndModuleChildren
+        def self.[](_version)
           self
         end
       end

@@ -24,8 +24,9 @@ describe SwitchmanInstJobs::Delayed::Worker do
       begin
         Delayed::Settings.worker_health_check_type = :consul
         Delayed::Settings.worker_health_check_config['service_name'] = 'inst-jobs'
-        worker = Delayed::Worker.new()
-        expect(worker.health_check.send(:service_name)).to eq "inst-jobs/#{Switchman::Shard.default.id}"
+        worker = Delayed::Worker.new
+        expect(worker.health_check.send(:service_name))
+          .to eq "inst-jobs/#{Switchman::Shard.default.id}"
         expect(Delayed::Settings.worker_health_check_config['service_name']).to eq 'inst-jobs'
       ensure
         Delayed::Settings.worker_health_check_type = :none

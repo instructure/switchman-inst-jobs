@@ -58,12 +58,12 @@ module SwitchmanInstJobs
               next db.shards.to_a if db.config[:delayed_jobs_shard] == 'self'
               db.delayed_jobs_shard
             end.compact.flatten.uniq # yes, all three
-            shard_dj_shards = ::Switchman::Shard.
-                where.not(delayed_jobs_shard_id: nil).
-                distinct.
-                pluck(:delayed_jobs_shard_id).
-                map { |id| ::Switchman::Shard.lookup(id) }.
-                compact
+            shard_dj_shards = ::Switchman::Shard
+              .where.not(delayed_jobs_shard_id: nil)
+              .distinct
+              .pluck(:delayed_jobs_shard_id)
+              .map { |id| ::Switchman::Shard.lookup(id) }
+              .compact
             (db_dj_shards + shard_dj_shards).uniq.sort
           end
         end

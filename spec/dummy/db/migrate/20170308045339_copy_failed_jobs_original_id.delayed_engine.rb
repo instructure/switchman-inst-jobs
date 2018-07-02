@@ -6,11 +6,9 @@ class CopyFailedJobsOriginalId < ActiveRecord::Migration[4.2]
 
   def up
     # this is a smaller, less frequently accessed table, so we just update all at once
-    # rubocop:disable Rails/SkipsModelValidations
     Delayed::Backend::ActiveRecord::Job::Failed
       .where('original_job_id is null')
       .update_all('original_job_id = original_id')
-    # rubocop:enable Rails/SkipsModelValidations
   end
 
   def down; end

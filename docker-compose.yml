@@ -14,8 +14,6 @@ services:
       options:
         max-file: '5'
         max-size: 1m
-    volumes:
-      - gems:/home/docker/.rvm/gems
 
   postgres:
     image: postgres:9.5
@@ -28,6 +26,3 @@ services:
     image: sosedoff/pgweb
     command: [/usr/bin/pgweb, --bind=0.0.0.0, --ssl=disable, --host=postgres, --db=test, --user=postgres]
     links: [postgres]
-
-volumes:
-  gems: {}

@@ -13,7 +13,7 @@ end
 
 require 'pry'
 
-require File.expand_path('../dummy/config/environment', __FILE__)
+require File.expand_path('dummy/config/environment', __dir__)
 require 'rspec/rails'
 
 # No reason to add default sleep time to specs:

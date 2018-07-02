@@ -2,8 +2,7 @@ module SwitchmanInstJobs
   class Engine < ::Rails::Engine
     isolate_namespace SwitchmanInstJobs
 
-    initializer 'sharding.active_record',
-                after: 'switchman.extend_connection_adapters' do
+    initializer 'sharding.active_record', after: 'switchman.extend_connection_adapters' do
       SwitchmanInstJobs.initialize_active_record
     end
 
@@ -11,8 +10,7 @@ module SwitchmanInstJobs
       SwitchmanInstJobs.initialize_inst_jobs
     end
 
-    initializer 'sharding.shackles',
-                after: 'switchman.extend_shackles' do
+    initializer 'sharding.shackles', after: 'switchman.extend_shackles' do
       SwitchmanInstJobs.initialize_shackles
     end
 

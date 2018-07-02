@@ -5,22 +5,34 @@ AllCops:
   TargetRailsVersion: 4.2
   TargetRubyVersion: 2.3
 
+Layout/AlignParameters:
+  EnforcedStyle: with_fixed_indentation # Default: with_first_parameter
+
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented # Default: aligned
+
 Metrics/AbcSize:
+  Max: 25 # Default: 15
   Exclude:
-    - 'spec/dummy/db/migrate/*.rb'
+    - spec/dummy/db/migrate/*.rb
 
 Metrics/BlockLength:
   Exclude:
-    - 'spec/**/*.rb'
+    - spec/**/*.rb
 
 Metrics/LineLength:
   Max: 100 # Default: 80
   Exclude:
-    - 'spec/dummy/db/migrate/*.rb'
+    - spec/dummy/db/migrate/*.rb
 
 Metrics/MethodLength:
+  Max: 15 # Default: 10
   Exclude:
-    - 'spec/dummy/db/migrate/*.rb'
+    - spec/dummy/db/migrate/*.rb
+
+Rails/SkipsModelValidations:
+  Exclude:
+    - spec/**/*.rb
 
 Style/Documentation:
   # This cop checks for missing top-level documentation of classes and modules.
@@ -28,6 +40,10 @@ Style/Documentation:
   # Namespace modules are modules that have nothing in their bodies except
   # classes or other modules.
   Enabled: false
+
+Style/FileName:
+  Exclude:
+    - lib/switchman-inst-jobs.rb
 
 Style/FrozenStringLiteralComment:
   # `when_needed` will add the frozen string literal comment to files
@@ -43,4 +59,4 @@ Style/FrozenStringLiteralComment:
 
 Style/GuardClause:
   Exclude:
-    - 'spec/dummy/db/migrate/*.rb'
+    - spec/dummy/db/migrate/*.rb
