@@ -65,4 +65,12 @@ describe SwitchmanInstJobs::Switchman::Shard do
       expect(Switchman::Shard.delayed_jobs_shards).to eq [Switchman::Shard.default, shard2].sort
     end
   end
+
+  it 'should use lookup instead of find when deserializing shards' do
+    job = shard.send_later_enqueue_args(:id, no_delay: true)
+    allow(job).to receive(:current_shard).and_return(Switchman::Shard.current) # load current_shard
+    expect(Switchman::Shard).to receive(:lookup).with(shard.id.to_s).and_return(shard)
+    job.instance_variable_set(:@payload_object, nil)
+    job.payload_object
+  end
 end
