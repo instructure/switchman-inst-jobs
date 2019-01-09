@@ -19,6 +19,7 @@ module SwitchmanInstJobs
     ::Delayed::Pool.prepend Delayed::Pool
     ::Delayed::Worker.prepend Delayed::Worker
     ::Delayed::Worker::HealthCheck.prepend Delayed::Worker::HealthCheck
+    ::SwitchmanInstJobs::NewRelic.enable
     ::Object.include Delayed::MessageSending
   end
 
@@ -41,6 +42,7 @@ require 'switchman_inst_jobs/delayed/pool'
 require 'switchman_inst_jobs/delayed/worker'
 require 'switchman_inst_jobs/delayed/worker/health_check'
 require 'switchman_inst_jobs/engine'
+require 'switchman_inst_jobs/new_relic'
 require 'switchman_inst_jobs/shackles'
 require 'switchman_inst_jobs/switchman/database_server'
 require 'switchman_inst_jobs/switchman/default_shard'
