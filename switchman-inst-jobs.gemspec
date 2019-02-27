@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
 
   s.add_dependency 'inst-jobs', '>= 0.12.1', '< 0.16'
   s.add_dependency 'railties', '>= 4.2', '< 5.3'
-  s.add_dependency 'switchman', '>= 1.9.7', '< 1.13'
+  s.add_dependency 'switchman', '>= 1.9.7', '< 1.14'
 
   s.add_development_dependency 'bundler', '~> 1.15'
   s.add_development_dependency 'byebug'
