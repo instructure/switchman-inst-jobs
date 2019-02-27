@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'railties', '>= 4.2', '< 5.3'
   s.add_dependency 'switchman', '>= 1.9.7', '< 1.14'
 
-  s.add_development_dependency 'bundler', '~> 1.15'
+  s.add_development_dependency 'bundler', '~> 2.0'
   s.add_development_dependency 'byebug'
   s.add_development_dependency 'imperium'
   s.add_development_dependency 'newrelic_rpm'
