@@ -25,7 +25,7 @@ module SwitchmanInstJobs
               return munge_service_name(::Switchman::Shard.current(:delayed_jobs)) { super() }
             end
 
-            ::Switchman::Shard.with_each_shard(shards, [:delayed_jobs]) do
+            ::Switchman::Shard.with_each_shard(shards, [:delayed_jobs], exception: :ignore) do
               singleton = <<~SINGLETON
                 periodic: Delayed::Worker::HealthCheck.reschedule_abandoned_jobs:#{::Switchman::Shard.current(:delayed_jobs).id}
               SINGLETON
