@@ -2,6 +2,8 @@ require 'inst-jobs'
 require 'switchman'
 
 module SwitchmanInstJobs
+  cattr_accessor :delayed_jobs_shard_fallback
+
   def self.initialize_active_record
     ::ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.prepend(
       ActiveRecord::ConnectionAdapters::PostgreSQLAdapter
