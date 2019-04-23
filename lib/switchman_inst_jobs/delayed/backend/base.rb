@@ -22,7 +22,7 @@ module SwitchmanInstJobs
                 super(object, enqueue_options)
               end
             else
-              super(object, enqueue_options)
+              ::Shackles.activate(:master) { super(object, enqueue_options) }
             end
           end
 
