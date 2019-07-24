@@ -6,12 +6,21 @@ cache: bundler
 rvm:
   - 2.3
   - 2.4
+  - 2.5
 
 gemfile:
   - spec/gemfiles/rails-4.2.gemfile
   - spec/gemfiles/rails-5.0.gemfile
   - spec/gemfiles/rails-5.1.gemfile
   - spec/gemfiles/rails-5.2.gemfile
+  - spec/gemfiles/rails-6.0.gemfile
+
+matrix:
+  exclude:
+    - rvm: 2.3
+      gemfile: spec/gemfiles/rails-6.0.gemfile
+    - rvm: 2.4
+      gemfile: spec/gemfiles/rails-6.0.gemfile
 
 addons:
   postgresql: '9.5'
