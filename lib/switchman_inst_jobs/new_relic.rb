@@ -2,9 +2,7 @@ module SwitchmanInstJobs
   module NewRelic
     module FixNewRelicDelayedJobs
       module NewRelicJobInvoker
-        if defined?(::NewRelic)
-          include ::NewRelic::Agent::Instrumentation::ControllerInstrumentation
-        end
+        include ::NewRelic::Agent::Instrumentation::ControllerInstrumentation if defined?(::NewRelic)
 
         def invoke_job(*args, &block)
           options = {

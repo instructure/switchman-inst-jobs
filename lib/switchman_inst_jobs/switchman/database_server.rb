@@ -8,7 +8,12 @@ module SwitchmanInstJobs
           ::Switchman::Shard.lookup(config[:delayed_jobs_shard])
         # have to avoid recursion for the default shard asking for the default
         # shard's delayed_jobs_shard
-        dj_shard ||= shard if shard&.default?
+        if shard&.default?
+          # first look for any shard that behaves like a jobs shard
+          dj_shard ||= ::Switchman::Shard.delayed_jobs_shards.first
+          # we're really truly out of options, use the default shard itself
+          dj_shard ||= shard
+        end
         dj_shard ||= SwitchmanInstJobs.delayed_jobs_shard_fallback&.call(self, shard)
         dj_shard || ::Switchman::Shard.default.delayed_jobs_shard
       end

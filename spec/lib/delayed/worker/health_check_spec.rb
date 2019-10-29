@@ -1,8 +1,5 @@
 describe SwitchmanInstJobs::Delayed::Worker::HealthCheck do
   describe '.reschedule_abandoned_jobs' do
-    before { Switchman::Shard.instance_variable_set(:@delayed_jobs_shards, nil) }
-    after { Switchman::Shard.instance_variable_set(:@delayed_jobs_shards, nil) }
-
     it "just calls super if there's only one jobs shard" do
       expect(Delayed::Settings).to receive(:worker_health_check_type).and_return(:consul).twice
       expect_any_instance_of(Delayed::Worker::ConsulHealthCheck)

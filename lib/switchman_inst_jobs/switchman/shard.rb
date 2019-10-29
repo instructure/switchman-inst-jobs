@@ -18,6 +18,11 @@ module SwitchmanInstJobs
       end
 
       module ClassMethods
+        def clear_cache
+          super
+          remove_instance_variable(:@delayed_jobs_shards) if instance_variable_defined?(:@delayed_jobs_shards)
+        end
+
         def current(category = :primary)
           if category == :delayed_jobs
             active_shards[category] || super(:primary).delayed_jobs_shard
@@ -53,19 +58,27 @@ module SwitchmanInstJobs
         end
 
         def delayed_jobs_shards
-          @delayed_jobs_shards ||= begin
-            db_dj_shards = ::Switchman::DatabaseServer.all.map do |db|
-              next db.shards.to_a if db.config[:delayed_jobs_shard] == 'self'
-              db.delayed_jobs_shard
-            end.compact.flatten.uniq # yes, all three
-            shard_dj_shards = ::Switchman::Shard
-              .where.not(delayed_jobs_shard_id: nil)
-              .distinct
-              .pluck(:delayed_jobs_shard_id)
-              .map { |id| ::Switchman::Shard.lookup(id) }
-              .compact
-            (db_dj_shards + shard_dj_shards).uniq.sort
+          unless instance_variable_defined?(:@delayed_jobs_shards)
+            # re-entrancy protection
+            @delayed_jobs_shards = []
+            @delayed_jobs_shards = begin
+              db_dj_shards = ::Switchman::DatabaseServer.all.map do |db|
+                next db.shards.to_a if db.config[:delayed_jobs_shard] == 'self'
+                db.delayed_jobs_shard
+              end.compact.flatten.uniq # yes, all three
+              shard_dj_shards = [] unless ::Switchman::Shard.columns_hash.key?('delayed_jobs_shard_id')
+              shard_dj_shards ||= begin
+                ::Switchman::Shard
+                  .where.not(delayed_jobs_shard_id: nil)
+                  .distinct
+                  .pluck(:delayed_jobs_shard_id)
+                  .map { |id| ::Switchman::Shard.lookup(id) }
+                  .compact
+              end
+              (db_dj_shards + shard_dj_shards).uniq.sort
+            end
           end
+          @delayed_jobs_shards
         end
       end
     end

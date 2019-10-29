@@ -21,12 +21,12 @@ Metrics/BlockLength:
     - spec/**/*.rb
 
 Metrics/LineLength:
-  Max: 100 # Default: 80
+  Max: 120 # Default: 80
   Exclude:
     - spec/dummy/db/migrate/*.rb
 
 Metrics/MethodLength:
-  Max: 15 # Default: 10
+  Max: 20 # Default: 10
   Exclude:
     - spec/dummy/db/migrate/*.rb
 

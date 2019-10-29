@@ -21,9 +21,7 @@ module SwitchmanInstJobs
           def reschedule_abandoned_jobs(call_super: false)
             shards = ::Switchman::Shard.delayed_jobs_shards
             call_super = true if shards.length == 1
-            if call_super
-              return munge_service_name(::Switchman::Shard.current(:delayed_jobs)) { super() }
-            end
+            return munge_service_name(::Switchman::Shard.current(:delayed_jobs)) { super() } if call_super
 
             ::Switchman::Shard.with_each_shard(shards, [:delayed_jobs], exception: :ignore) do
               singleton = <<~SINGLETON
