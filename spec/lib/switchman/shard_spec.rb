@@ -67,7 +67,7 @@ describe SwitchmanInstJobs::Switchman::Shard do
       shard1 = Switchman::Shard.create!
       shard2 = Switchman::Shard.create!
       shard1.update_attribute(:delayed_jobs_shard_id, shard2.id)
-      expect(Switchman::Shard.delayed_jobs_shards).to eq [Switchman::Shard.default, shard2].sort
+      expect(Switchman::Shard.delayed_jobs_shards).to eq [shard2].sort
     end
   end
 

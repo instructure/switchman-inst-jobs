@@ -12,7 +12,7 @@ Layout/MultilineMethodCallIndentation:
   EnforcedStyle: indented # Default: aligned
 
 Metrics/AbcSize:
-  Max: 25 # Default: 15
+  Max: 30 # Default: 15
   Exclude:
     - spec/dummy/db/migrate/*.rb
 

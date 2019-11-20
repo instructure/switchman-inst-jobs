@@ -13,6 +13,8 @@ describe SwitchmanInstJobs::Delayed::Worker::HealthCheck do
     it 'schedules a separate job for each jobs shard' do
       shard1 = Switchman::Shard.create!
       shard1.update_attribute(:delayed_jobs_shard_id, shard1.id)
+      shard2 = Switchman::Shard.create!
+      shard2.update_attribute(:delayed_jobs_shard_id, shard2.id)
 
       ran_on_shards = []
       expect(Delayed::Job).to receive(:running_jobs).never
@@ -20,7 +22,7 @@ describe SwitchmanInstJobs::Delayed::Worker::HealthCheck do
         ran_on_shards << Switchman::Shard.current(:delayed_jobs)
       end
       Delayed::Worker::HealthCheck.reschedule_abandoned_jobs
-      expect(ran_on_shards).to eq [Switchman::Shard.default, shard1].sort
+      expect(ran_on_shards).to eq [shard1, shard2].sort
     end
   end
 end

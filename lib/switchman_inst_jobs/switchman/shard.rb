@@ -60,12 +60,7 @@ module SwitchmanInstJobs
         def delayed_jobs_shards
           unless instance_variable_defined?(:@delayed_jobs_shards)
             # re-entrancy protection
-            @delayed_jobs_shards = []
             @delayed_jobs_shards = begin
-              db_dj_shards = ::Switchman::DatabaseServer.all.map do |db|
-                next db.shards.to_a if db.config[:delayed_jobs_shard] == 'self'
-                db.delayed_jobs_shard
-              end.compact.flatten.uniq # yes, all three
               shard_dj_shards = [] unless ::Switchman::Shard.columns_hash.key?('delayed_jobs_shard_id')
               shard_dj_shards ||= begin
                 ::Switchman::Shard
@@ -75,6 +70,15 @@ module SwitchmanInstJobs
                   .map { |id| ::Switchman::Shard.lookup(id) }
                   .compact
               end
+              # set it temporarily, to avoid the default shard falling back to itself
+              # if other shards are usable
+              @delayed_jobs_shards = shard_dj_shards.uniq.sort
+
+              db_dj_shards = ::Switchman::DatabaseServer.all.map do |db|
+                next db.shards.to_a if db.config[:delayed_jobs_shard] == 'self'
+                db.delayed_jobs_shard
+              end.compact.flatten.uniq # yes, all three
+
               (db_dj_shards + shard_dj_shards).uniq.sort
             end
           end
