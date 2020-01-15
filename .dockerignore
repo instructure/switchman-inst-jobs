@@ -1,5 +1,4 @@
 /.ruby-version
-/build.sh
 /coverage/
 /doc/
 /Dockerfile
@@ -7,6 +6,7 @@
 /docker-compose.override.example.yml
 /docker-compose.override.yml
 /Gemfile.lock
+/Jenkinsfile
 /log/
 /pkg/
 /spec/gemfiles/.bundle/

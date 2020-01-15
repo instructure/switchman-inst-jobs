@@ -59,7 +59,9 @@ gem with multiple versions of Ruby. This requires docker and docker-compose to
 be installed. To get started, run the following:
 
 ```bash
-./build.sh
+docker-compose build --pull
+docker-compose up -d postgres
+docker-compose run --rm app
 ```
 
 This will install the gem in a docker image with all versions of Ruby installed,
