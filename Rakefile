@@ -11,13 +11,13 @@ load 'rails/tasks/engine.rake'
 
 require 'bundler/gem_tasks'
 
-# rubocop:disable Lint/HandleExceptions
+# rubocop:disable Lint/SuppressedException
 begin
   require 'rspec/core/rake_task'
   RSpec::Core::RakeTask.new(:spec)
 rescue LoadError
   # ignored
 end
-# rubocop:enable Lint/HandleExceptions
+# rubocop:enable Lint/SuppressedException
 
 task default: :spec

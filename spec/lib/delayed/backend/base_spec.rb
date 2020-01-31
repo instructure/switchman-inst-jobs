@@ -2,7 +2,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
   let(:shard) { Switchman::Shard.create }
   let(:project) { Project.create_sharded! }
   let(:harness_class) do
-    Class.new(ActiveRecord::Base) do
+    Class.new(ApplicationRecord) do
       prepend SwitchmanInstJobs::Delayed::Backend::Base
 
       attr_accessor :shard_id

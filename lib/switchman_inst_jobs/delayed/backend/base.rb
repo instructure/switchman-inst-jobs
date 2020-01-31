@@ -64,12 +64,14 @@ module SwitchmanInstJobs
 
         def deserialize(source)
           raise ShardNotFoundError, shard_id unless current_shard
+
           current_shard.activate { super }
         rescue ::Switchman::ConnectionError, PG::ConnectionBad, PG::UndefinedTable
           # likely a missing shard with a stale cache
           current_shard.send(:clear_cache)
           ::Switchman::Shard.clear_cache
           raise ShardNotFoundError, shard_id unless ::Switchman::Shard.where(id: shard_id).exists?
+
           raise
         end
       end

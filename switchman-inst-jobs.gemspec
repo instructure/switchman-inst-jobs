@@ -14,22 +14,23 @@ Gem::Specification.new do |s|
 
   s.files    = Dir['{db,lib}/**/*']
 
-  s.required_ruby_version = '>= 2.3'
+  s.required_ruby_version = '>= 2.4'
 
-  s.add_dependency 'inst-jobs', '>= 0.12.1', '< 0.16'
-  s.add_dependency 'railties', '>= 4.2', '< 6.1'
-  s.add_dependency 'switchman', '>= 1.9.7', '< 1.15'
+  s.add_dependency 'inst-jobs', '>= 0.15', '< 0.16'
+  s.add_dependency 'railties', '>= 5.2', '< 6.1'
+  s.add_dependency 'switchman', '>= 1.14', '< 1.15'
 
   s.add_development_dependency 'bundler'
   s.add_development_dependency 'byebug'
   s.add_development_dependency 'imperium'
   s.add_development_dependency 'newrelic_rpm'
-  s.add_development_dependency 'pg', '~> 0'
+  s.add_development_dependency 'pg', '~> 1.0'
   s.add_development_dependency 'pry', '~> 0'
-  s.add_development_dependency 'rake', '~> 12.0'
+  s.add_development_dependency 'rake', '~> 12'
   s.add_development_dependency 'rspec', '~> 3.6'
   s.add_development_dependency 'rspec-rails', '~> 3.6'
-  s.add_development_dependency 'rubocop', '~> 0.57.2'
-  s.add_development_dependency 'simplecov', '~> 0.14'
-  s.add_development_dependency 'wwtd', '~> 1.3.0'
+  s.add_development_dependency 'rubocop', '~> 0.79.0'
+  s.add_development_dependency 'rubocop-rails', '~> 2.4.2'
+  s.add_development_dependency 'simplecov', '~> 0.18'
+  s.add_development_dependency 'wwtd', '~> 1.4'
 end

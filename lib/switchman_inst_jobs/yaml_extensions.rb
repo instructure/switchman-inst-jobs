@@ -5,7 +5,7 @@ module SwitchmanInstJobs
         if object.tag == '!ruby/ActiveRecord:Switchman::Shard'
           ::Switchman::Shard.lookup(object.value) ||
             raise(Delayed::Backend::RecordNotFound,
-              "Couldn't find Switchman::Shard with id #{object.value.inspect}")
+                  "Couldn't find Switchman::Shard with id #{object.value.inspect}")
         else
           super
         end

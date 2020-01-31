@@ -1,14 +1,16 @@
-if /^2\.4/ =~ RUBY_VERSION && /5\.0/ =~ ENV['BUNDLE_GEMFILE'] # Limit coverage to one build
+if /^2\.4/ =~ RUBY_VERSION && /5\.2/ =~ ENV['BUNDLE_GEMFILE'] # Limit coverage to one build
   require 'simplecov'
 
   SimpleCov.start do
+    enable_coverage :branch
+    minimum_coverage 90
+
     add_filter 'db/migrate'
     add_filter 'lib/switchman_inst_jobs/version.rb'
     add_filter 'spec'
+
     track_files 'lib/**/*.rb'
   end
-
-  SimpleCov.minimum_coverage(90)
 end
 
 require 'pry'

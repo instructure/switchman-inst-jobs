@@ -76,6 +76,7 @@ module SwitchmanInstJobs
 
               db_dj_shards = ::Switchman::DatabaseServer.all.map do |db|
                 next db.shards.to_a if db.config[:delayed_jobs_shard] == 'self'
+
                 db.delayed_jobs_shard
               end.compact.flatten.uniq # yes, all three
 

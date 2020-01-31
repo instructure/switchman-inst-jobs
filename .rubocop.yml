@@ -1,15 +1,19 @@
-Rails:
-  Enabled: true
+require: rubocop-rails
 
 AllCops:
-  TargetRailsVersion: 4.2
-  TargetRubyVersion: 2.3
+  TargetRailsVersion: 5.2
+  TargetRubyVersion: 2.4
 
-Layout/AlignParameters:
-  EnforcedStyle: with_fixed_indentation # Default: with_first_parameter
+Layout/LineLength:
+  Max: 120 # Default: 80
+  Exclude:
+    - spec/dummy/db/migrate/*.rb
 
 Layout/MultilineMethodCallIndentation:
   EnforcedStyle: indented # Default: aligned
+
+Layout/ParameterAlignment:
+  EnforcedStyle: with_fixed_indentation # Default: with_first_parameter
 
 Metrics/AbcSize:
   Max: 30 # Default: 15
@@ -20,15 +24,15 @@ Metrics/BlockLength:
   Exclude:
     - spec/**/*.rb
 
-Metrics/LineLength:
-  Max: 120 # Default: 80
-  Exclude:
-    - spec/dummy/db/migrate/*.rb
-
 Metrics/MethodLength:
   Max: 20 # Default: 10
   Exclude:
     - spec/dummy/db/migrate/*.rb
+
+Naming/FileName:
+  Exclude:
+    - lib/switchman-inst-jobs.rb
+    - spec/gemfiles/*.gemfile
 
 Rails/SkipsModelValidations:
   Exclude:
@@ -41,20 +45,7 @@ Style/Documentation:
   # classes or other modules.
   Enabled: false
 
-Style/FileName:
-  Exclude:
-    - lib/switchman-inst-jobs.rb
-
 Style/FrozenStringLiteralComment:
-  # `when_needed` will add the frozen string literal comment to files
-  # only when the `TargetRubyVersion` is set to 2.3+.
-  # `always` will always add the frozen string literal comment to a file
-  # regardless of the Ruby version or if `freeze` or `<<` are called on a
-  # string literal. If you run code against multiple versions of Ruby, it is
-  # possible that this will create errors in Ruby 2.3.0+.
-  #
-  # See: https://wyeworks.com/blog/2015/12/1/immutable-strings-in-ruby-2-dot-3
-  EnforcedStyle: when_needed
   Enabled: false
 
 Style/GuardClause:
