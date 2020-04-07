@@ -20,15 +20,20 @@ module SwitchmanInstJobs
 
           def reschedule_abandoned_jobs(call_super: false)
             shards = ::Switchman::Shard.delayed_jobs_shards
-            call_super = true if shards.length == 1
-            return munge_service_name(::Switchman::Shard.current(:delayed_jobs)) { super() } if call_super
+            call_super = shards.first if shards.length == 1
+            unless call_super == false
+              call_super.activate(:delayed_jobs) do
+                return munge_service_name(call_super) { super() }
+              end
+            end
 
             ::Switchman::Shard.with_each_shard(shards, [:delayed_jobs], exception: :ignore) do
+              shard = ::Switchman::Shard.current(:delayed_jobs)
               singleton = <<~SINGLETON
-                periodic: Delayed::Worker::HealthCheck.reschedule_abandoned_jobs:#{::Switchman::Shard.current(:delayed_jobs).id}
+                periodic: Delayed::Worker::HealthCheck.reschedule_abandoned_jobs:#{shard.id}
               SINGLETON
               send_later_enqueue_args(
-                :reschedule_abandoned_jobs, { singleton: singleton }, call_super: true
+                :reschedule_abandoned_jobs, { singleton: singleton }, call_super: shard
               )
             end
           end
