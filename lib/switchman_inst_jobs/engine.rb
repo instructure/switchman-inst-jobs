@@ -8,6 +8,14 @@ module SwitchmanInstJobs
 
     initializer 'sharding.delayed' do
       SwitchmanInstJobs.initialize_inst_jobs
+
+      ::Delayed::Worker.lifecycle.around(:work_queue_pop) do |worker, config, &block|
+        if config[:shard]
+          ::Switchman::Shard.lookup(config[:shard]).activate(:delayed_jobs) { block.call(worker, config) }
+        else
+          block.call(worker, config)
+        end
+      end
     end
 
     initializer 'sharding.shackles', after: 'switchman.extend_shackles' do
