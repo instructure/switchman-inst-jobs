@@ -46,6 +46,27 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
       harness.current_shard = ::Switchman::DefaultShard.instance
       expect(harness.shard_id).to be_nil
     end
+
+    it 'does not lock the job if jobs are not held on the current shard' do
+      shard.unhold_jobs!
+      job = nil
+      shard.activate do
+        job = 'string'.send_later_enqueue_args(:size, no_delay: true)
+      end
+      expect(job.locked_by).to be_nil
+      expect(job.locked_at).to be_nil
+    end
+
+    it 'locks the job if jobs are held on the current shard' do
+      shard.hold_jobs!
+      job = nil
+      shard.activate do
+        job = 'string'.send_later_enqueue_args(:size, no_delay: true)
+      end
+      expect(job.locked_by).to_not be_nil
+      expect(job.locked_at).to_not be_nil
+      shard.unhold_jobs!
+    end
   end
 
   describe '#invoke_job' do

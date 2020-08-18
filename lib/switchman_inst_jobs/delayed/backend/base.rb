@@ -56,6 +56,12 @@ module SwitchmanInstJobs
         def current_shard=(shard)
           self.shard_id = shard.id
           self.shard_id = nil if shard.is_a?(::Switchman::DefaultShard)
+          # If jobs are held for a shard, enqueue new ones as held as well
+          return unless shard.jobs_held
+
+          self.locked_by = ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY
+          self.locked_at = ::Delayed::Job.db_time_now
+          self.attempts = ::Delayed::Backend::Base::ON_HOLD_COUNT
         end
 
         def invoke_job

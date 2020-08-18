@@ -4,6 +4,10 @@ module SwitchmanInstJobs
       def delayed_jobs_shard
         self
       end
+
+      def jobs_held
+        false
+      end
     end
   end
 end
