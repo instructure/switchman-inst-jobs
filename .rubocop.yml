@@ -35,8 +35,7 @@ Naming/FileName:
     - spec/gemfiles/*.gemfile
 
 Rails/SkipsModelValidations:
-  Exclude:
-    - spec/**/*.rb
+  Enabled: false
 
 Style/Documentation:
   # This cop checks for missing top-level documentation of classes and modules.

@@ -30,7 +30,7 @@ module SwitchmanInstJobs
         delayed_jobs_shard.activate(:delayed_jobs) do
           while ::Delayed::Job.where(shard_id: id)
               .where.not(locked_at: nil)
-              .where.not(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY).count.positive?
+              .where.not(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY).exists?
             sleep 10
             lock_jobs_for_hold
           end
@@ -41,7 +41,6 @@ module SwitchmanInstJobs
         self.jobs_held = false
         save! if changed?
         delayed_jobs_shard.activate(:delayed_jobs) do
-          # rubocop:disable Rails/SkipsModelValidations
           ::Delayed::Job.where(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY, shard_id: id)
             .in_batches(of: 10_000)
             .update_all(
@@ -50,20 +49,17 @@ module SwitchmanInstJobs
               attempts: 0,
               failed_at: nil
             )
-          # rubocop:enable Rails/SkipsModelValidations
         end
       end
 
       private
 
       def lock_jobs_for_hold
-        # rubocop:disable Rails/SkipsModelValidations
         ::Delayed::Job.where(locked_at: nil, shard_id: id).in_batches(of: 10_000).update_all(
           locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY,
           locked_at: ::Delayed::Job.db_time_now,
           attempts: ::Delayed::Backend::Base::ON_HOLD_COUNT
         )
-        # rubocop:enable Rails/SkipsModelValidations
       end
 
       module ClassMethods
