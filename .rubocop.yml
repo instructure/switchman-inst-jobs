@@ -22,10 +22,15 @@ Metrics/AbcSize:
 
 Metrics/BlockLength:
   Exclude:
+    - '*.gemspec'
     - spec/**/*.rb
 
 Metrics/MethodLength:
-  Max: 20 # Default: 10
+  Max: 25 # Default: 10
+  Exclude:
+    - spec/dummy/db/migrate/*.rb
+
+Metrics/ClassLength:
   Exclude:
     - spec/dummy/db/migrate/*.rb
 

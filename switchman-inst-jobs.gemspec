@@ -16,7 +16,8 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '>= 2.4'
 
-  s.add_dependency 'inst-jobs', '>= 0.15', '< 0.16'
+  s.add_dependency 'inst-jobs', '>= 0.16', '< 0.17'
+  s.add_dependency 'parallel', '>= 1.19'
   s.add_dependency 'railties', '>= 5.2', '< 6.1'
   s.add_dependency 'switchman', '>= 1.14', '< 1.16'
 

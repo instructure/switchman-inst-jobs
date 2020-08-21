@@ -2,11 +2,16 @@ describe SwitchmanInstJobs::JobsMigrator do
   let(:shard1) { Switchman::Shard.create }
 
   before do
+    # Since we can explicitly clear the cache, this makes specs run in a reasonable length of time
+    described_class.instance_variable_set(:@skip_cache_wait, true)
+    # Pin the default shard as a jobs shard to ensure the default shard is used as a jobs shard when it is active
+    Switchman::Shard.default.delayed_jobs_shard_id = Switchman::Shard.default.id
+    Switchman::Shard.default.save!
     shard1.delayed_jobs_shard_id = shard1.id
     shard1.save!
   end
 
-  it "should move strand'd jobs, but not non-strand'd jobs" do
+  it "should move strand'd jobs, and not non-strand'd jobs" do
     # bad other specs for leaving stuff in here
     starting_count = Delayed::Job.count
 
@@ -26,15 +31,15 @@ describe SwitchmanInstJobs::JobsMigrator do
     # 5 + 6 + 7 + 4
     expect(Delayed::Job.count).to eq starting_count + 22
     described_class.run
-    # 7 + 4
-    expect(Delayed::Job.count).to eq starting_count + 11
+    # 4
+    expect(Delayed::Job.count).to eq starting_count + 4
 
     shard1.activate(:delayed_jobs) do
-      # 5 + 6 + 3
-      expect(Delayed::Job.count).to eq 14
+      # 5 + 6 + 3 + 7
+      expect(Delayed::Job.count).to eq 21
       # 0.1 jobs come before 0.5 jobs
       strand = Delayed::Job.where(strand: 'strand1')
-      first_job = strand.order(:id).first
+      first_job = strand.next_in_strand_order.first
       expect(first_job.payload_object.args).to eq [0.1]
       # when the current running job on other shard finishes it will set next_in_strand
       expect(first_job.next_in_strand).to be_falsy
@@ -42,62 +47,27 @@ describe SwitchmanInstJobs::JobsMigrator do
     end
   end
 
-  it 'should move all jobs if requested to drain' do
-    # bad other specs for leaving stuff in here
-    starting_count = Delayed::Job.count
-
+  it 'should create a blocker strand if a job is currently running' do
     Switchman::Shard.activate(primary: shard1, delayed_jobs: Switchman::Shard.default) do
-      expect(Switchman::Shard.current(:delayed_jobs)).to eq Switchman::Shard.default
-      7.times { Kernel.send_later_enqueue_args(:sleep, {}, 0.3) }
+      5.times { Kernel.send_later_enqueue_args(:sleep, { strand: 'strand1' }, 0.1) }
     end
-    4.times { Kernel.send_later_enqueue_args(:sleep, {}, 0.4) }
+    Delayed::Job.where(shard_id: shard1.id, strand: 'strand1').next_in_strand_order.first
+      .update(locked_by: 'specs', locked_at: DateTime.now)
 
-    # 7 + 4
-    expect(Delayed::Job.count).to eq starting_count + 11
-    described_class.run(drain: true)
-    expect(Delayed::Job.count).to eq starting_count + 4
+    expect(Delayed::Job.where(strand: 'strand1').count).to eq 5
+    described_class.run
+    # The currently running job is kept
+    expect(Delayed::Job.count).to eq 1
 
     shard1.activate(:delayed_jobs) do
-      expect(Delayed::Job.count).to eq 7
-    end
-  end
-
-  context 'negative id jobs' do
-    def create_job_with_id(id)
-      Switchman::Shard.activate(primary: shard1, delayed_jobs: Switchman::Shard.default) do
-        j = Kernel.send_later_enqueue_args(:sleep, strand: 'strand', no_delay: true)
-        Delayed::Job.where(id: j).update_all(id: id)
-      end
-    end
-
-    it 'pukes if there are negative jobs but no room to move them' do
-      expect(Delayed::Job.count).to eq 0
-      create_job_with_id(-1)
-      create_job_with_id(1)
-      expect { described_class.run }.to raise_error(/negative IDs/)
-    end
-
-    it 'automatically moves a job if there is room' do
-      expect(Delayed::Job.count).to eq 0
-      create_job_with_id(-1)
-      create_job_with_id(2)
-      described_class.run
-    end
-
-    it "moves jobs by compacting if there's room" do
-      expect(Delayed::Job.count).to eq 0
-      create_job_with_id(-10)
-      create_job_with_id(-7)
-      create_job_with_id(20)
-      described_class.run
-    end
-
-    it "pukes if it can't move a job to a higher id" do
-      expect(Delayed::Job.count).to eq 0
-      create_job_with_id(-1)
-      create_job_with_id(2)
-      Delayed::Job.where(id: -1).update_all(locked_by: 'me', locked_at: Time.now.utc)
-      expect { described_class.run }.to raise_error(/negative IDs/)
+      strand = Delayed::Job.where(strand: 'strand1')
+      # There should be the 4 non-running jobs + 1 blocker
+      expect(strand.count).to eq 5
+      first_job = strand.next_in_strand_order.first
+      expect(first_job.source).to eq 'JobsMigrator::StrandBlocker'
+      # when the current running job on other shard finishes it will set next_in_strand
+      expect(first_job.next_in_strand).to be_falsy
+      expect(strand.where(next_in_strand: true).count).to eq 0
     end
   end
 
@@ -135,7 +105,7 @@ describe SwitchmanInstJobs::JobsMigrator do
         Kernel.send_later_enqueue_args(:sleep, strand: 'strand', no_delay: true)
       end
       described_class.run
-      expect(@new_job.new_record?).to be false
+      expect(@new_job.new_record?).to be true
     end
   end
 end

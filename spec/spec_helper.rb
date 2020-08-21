@@ -7,6 +7,7 @@ if /^2\.4/ =~ RUBY_VERSION && /5\.2/ =~ ENV['BUNDLE_GEMFILE'] # Limit coverage t
 
     add_filter 'db/migrate'
     add_filter 'lib/switchman_inst_jobs/version.rb'
+    add_filter 'lib/switchman_inst_jobs/new_relic.rb'
     add_filter 'spec'
 
     track_files 'lib/**/*.rb'

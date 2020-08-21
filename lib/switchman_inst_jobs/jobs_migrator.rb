@@ -1,7 +1,9 @@
 # Just disabling all the rubocop metrics for this file for now,
 # as it is a direct port-in of existing code
 
-# rubocop:disable Metrics/BlockLength, Metrics/MethodLength, Metrics/AbcSize, Metrics/ClassLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+# rubocop:disable Metrics/BlockLength, Metrics/MethodLength, Metrics/AbcSize, Metrics/ClassLength
+require 'set'
+require 'parallel'
 
 module SwitchmanInstJobs
   class JobsMigrator
@@ -25,9 +27,37 @@ module SwitchmanInstJobs
         end
       end
 
-      def run(drain: false)
+      def migrate_shards(shard_map)
+        source_shards = Set[]
+        shard_map.each do |(shard, target_shard)|
+          shard = ::Switchman::Shard.find(shard) unless shard.is_a?(::Switchman::Shard)
+          source_shards << shard.delayed_jobs_shard.id
+          # If target_shard is an int, it won't have an id, but we can just use it as is
+          shard.update(delayed_jobs_shard_id: target_shard.try(:id) || target_shard, block_stranded: true)
+        end
+
+        # Wait a little over the 60 second in-process shard cache clearing
+        # threshold to ensure that all new stranded jobs are now being
+        # enqueued with next_in_strand: false
+        Rails.logger.debug("Waiting for caches to clear (#{source_shard.id} -> #{target_shard.id})")
+        sleep(65) unless @skip_cache_wait
+
+        # TODO: 4 has been picked completely out of a hat.  We should make it configurable or something
+        Parallel.each(source_shards, in_processes: 4) do |s|
+          # Ensure the child processes don't share connections with the parent
+          Delayed::Pool.on_fork.call
+          ActiveRecord::Base.clear_all_connections!
+          s.activate(:delayed_jobs) { run }
+        end
+      end
+
+      # This method expects that all relevant shards already have block_stranded: true
+      # but otherwise jobs can be running normally
+      def run
+        # Ensure this is never run with a dirty in-memory shard cache
+        ::Switchman::Shard.clear_cache
         migrate_strands
-        migrate_everything if drain
+        migrate_everything
       end
 
       def migrate_strands
@@ -42,46 +72,9 @@ module SwitchmanInstJobs
 
         source_shard = ::Switchman::Shard.current(:delayed_jobs)
         strand_scope = ::Delayed::Job.shard(source_shard).where('strand IS NOT NULL')
-        shard_ids = strand_scope.distinct.pluck(:shard_id)
-
-        shard_map = {}
-        ::Switchman::Shard.find(shard_ids).each do |shard|
-          next if shard.delayed_jobs_shard == source_shard
-
-          shard_map[shard.delayed_jobs_shard] ||= []
-          shard_map[shard.delayed_jobs_shard] << shard.id
-        end
-
+        shard_map = build_shard_map(strand_scope, source_shard)
         shard_map.each do |(target_shard, source_shard_ids)|
           shard_scope = strand_scope.where(shard_id: source_shard_ids)
-
-          # negative IDs from a previous jobs migration are bad news!
-          unless (jobs_to_move = shard_scope.where('id<0').order(:id).pluck(:id)).empty?
-            # can we just shift them?
-            available_space = ::Delayed::Job.where('id>0').minimum(:id)
-            # available_space is highly unlikely to be NULL. don't bother handling that case gracefully
-            if available_space.nil? || jobs_to_move.length >= available_space
-              raise 'You have jobs with negative IDs from a previous jobs migration; please wait for them to clear.'
-            end
-
-            ::Delayed::Job.transaction do
-              total = 0
-              jobs_to_move.each_slice(1000) do |slice|
-                transpositions = 'id=CASE id '
-                slice.each_with_index do |j_id, i|
-                  transpositions << "WHEN #{j_id} THEN #{available_space - jobs_to_move.length + total + i} "
-                end
-                transpositions << 'END'
-                total += slice.length
-
-                next if shard_scope.where(id: slice)
-                  .where("id<0 AND (locked_by IS NULL OR locked_by LIKE 'prefetch%')")
-                  .update_all(transpositions) == slice.length
-
-                raise 'You have jobs with negative IDs from a previous jobs migration; please wait for them to clear.'
-              end
-            end
-          end
 
           # 1) is taken care of because it should not show up here in strands
           strands = shard_scope.distinct.order(:strand).pluck(:strand)
@@ -92,52 +85,64 @@ module SwitchmanInstJobs
                 this_strand_scope = shard_scope.where(strand: strand)
                 # we want to copy all the jobs except the one that is still running.
                 jobs_scope = this_strand_scope.where(locked_by: nil)
-                jobs = jobs_scope.order(:id).to_a
-                max_id = this_strand_scope.last&.local_id
-                min_id_on_new_shard = ::Delayed::Job.minimum(:id) || 1
-                id_delta = min_id_on_new_shard - max_id - 1 if max_id
-                id_delta ||= 0
 
                 # 2) and part of 3) are taken care of here by creating a blocker
                 # job with next_in_strand = false. as soon as the current
                 # running job is finished it should set next_in_strand
-                strand_is_in_future = false
-                if (first = this_strand_scope.where('locked_by IS NOT NULL').first)
-                  strand_is_in_future = true if first.run_at > Time.now.utc + 10.minutes
-                  unless strand_is_in_future
-                    first_job = ::Delayed::Job.create!(strand: strand, next_in_strand: false)
-                    first_job.id = id_delta
-                    first_job.payload_object = ::Delayed::PerformableMethod.new(Kernel, :sleep, [0])
-                    first_job.queue = first.queue
-                    first_job.tag = 'Kernel.sleep'
-                    first_job.source = 'JobsMigrator::StrandBlocker'
-                    first_job.max_attempts = 1
-                    first_job.save!
-                    # the rest of 3) is taken care of here
-                    # make sure that all the jobs moved over are NOT next in strand
-                    ::Delayed::Job.where(next_in_strand: true, strand: strand, locked_by: nil)
-                      .update_all(next_in_strand: false)
-                  end
+                # We lock it to ensure that the jobs worker can't delete it until we are done moving the strand
+                # Since we only unlock it on the new jobs queue *after* deleting from the original
+                # the lock ensures the blocker always gets unlocked
+                first = this_strand_scope.where('locked_by IS NOT NULL').next_in_strand_order.lock.first
+                if first
+                  first_job = ::Delayed::Job.create!(strand: strand, next_in_strand: false)
+                  first_job.payload_object = ::Delayed::PerformableMethod.new(Kernel, :sleep, [0])
+                  first_job.queue = first.queue
+                  first_job.tag = 'Kernel.sleep'
+                  first_job.source = 'JobsMigrator::StrandBlocker'
+                  first_job.max_attempts = 1
+                  # If we ever have jobs left over from 9999 jobs moves of a single shard,
+                  # something has gone terribly wrong
+                  first_job.strand_order_override = -9999
+                  first_job.save!
+                  # the rest of 3) is taken care of here
+                  # make sure that all the jobs moved over are NOT next in strand
+                  ::Delayed::Job.where(next_in_strand: true, strand: strand, locked_by: nil)
+                    .update_all(next_in_strand: false)
                 end
 
                 # 4) is taken care of here, by leaveing next_in_strand alone and
                 # it should execute on the new shard
-                jobs.each do |job|
-                  new_job = job.dup
-                  new_job.shard = target_shard
-                  new_job.id = job.local_id + id_delta unless strand_is_in_future
-                  @before_move_callbacks&.each do |proc|
-                    proc.call(
-                      old_job: job,
-                      new_job: new_job
-                    )
-                  end
-                  new_job.save!
+                batch_move_jobs(
+                  target_shard: target_shard,
+                  source_shard: source_shard,
+                  scope: jobs_scope
+                ) do |job, new_job|
+                  # This ensures jobs enqueued on the old jobs shard run before jobs on the new jobs queue
+                  new_job.strand_order_override = job.strand_order_override - 1
                 end
-
-                # delete all jobs that are not currently running.
-                source_shard.activate(:delayed_jobs) { jobs_scope.delete_all }
               end
+            end
+
+            ::Switchman::Shard.find(source_shard_ids).each do |shard|
+              shard.update(block_stranded: false)
+            end
+            # Wait a little over the 60 second in-process shard cache clearing
+            # threshold to ensure that all new stranded jobs are now being
+            # enqueued with next_in_strand: false
+            Rails.logger.debug("Waiting for caches to clear (#{source_shard.id} -> #{target_shard.id})")
+            # for spec usage only
+            sleep(65) unless @skip_cache_wait
+            # At this time, let's unblock all the strands on the target shard that aren't being held by a blocker
+            # but actually could have run and we just didn't know it because we didn't know if they had jobs
+            # on the source shard
+            # rubocop:disable Layout/LineLength
+            strands_to_unblock = shard_scope.where.not(source: 'JobsMigrator::StrandBlocker')
+              .distinct
+              .where("NOT EXISTS (SELECT 1 FROM #{::Delayed::Job.quoted_table_name} dj2 WHERE delayed_jobs.strand=dj2.strand AND next_in_strand)")
+              .pluck(:strand)
+            # rubocop:enable Layout/LineLength
+            strands_to_unblock.each do |strand|
+              Delayed::Job.where(strand: strand).next_in_strand_order.first.update_attribute(:next_in_strand, true)
             end
           end
         end
@@ -146,6 +151,20 @@ module SwitchmanInstJobs
       def migrate_everything
         source_shard = ::Switchman::Shard.current(:delayed_jobs)
         scope = ::Delayed::Job.shard(source_shard).where('strand IS NULL')
+
+        shard_map = build_shard_map(scope, source_shard)
+        shard_map.each do |(target_shard, source_shard_ids)|
+          batch_move_jobs(
+            target_shard: target_shard,
+            source_shard: source_shard,
+            scope: scope.where(shard_id: source_shard_ids).where(locked_by: nil)
+          )
+        end
+      end
+
+      private
+
+      def build_shard_map(scope, source_shard)
         shard_ids = scope.distinct.pluck(:shard_id)
 
         shard_map = {}
@@ -156,25 +175,97 @@ module SwitchmanInstJobs
           shard_map[shard.delayed_jobs_shard] << shard.id
         end
 
-        shard_map.each do |(target_shard, source_shard_ids)|
-          scope.where(shard_id: source_shard_ids).find_each do |job|
+        shard_map
+      end
+
+      def batch_move_jobs(target_shard:, source_shard:, scope:)
+        while scope.exists?
+          # Adapted from get_and_lock_next_available in delayed/backend/active_record.rb
+          target_jobs = scope.limit(1000).lock('FOR UPDATE SKIP LOCKED')
+
+          query = "WITH limited_jobs AS (#{target_jobs.to_sql}) " \
+                  "UPDATE #{::Delayed::Job.quoted_table_name} " \
+                  "SET locked_by = #{::Delayed::Job.connection.quote(::Delayed::Backend::Base::ON_HOLD_LOCKED_BY)}, " \
+                  "locked_at = #{::Delayed::Job.connection.quote(::Delayed::Job.db_time_now)} "\
+                  "FROM limited_jobs WHERE limited_jobs.id=#{::Delayed::Job.quoted_table_name}.id " \
+                  "RETURNING #{::Delayed::Job.quoted_table_name}.*"
+
+          jobs = source_shard.activate(:delayed_jobs) { ::Delayed::Job.find_by_sql(query) }
+          new_jobs = jobs.map do |job|
             new_job = job.dup
             new_job.shard = target_shard
+            new_job.created_at = job.created_at
+            new_job.updated_at = job.updated_at
+            new_job.locked_at = nil
+            new_job.locked_by = nil
+            yield(job, new_job) if block_given?
             @before_move_callbacks&.each do |proc|
               proc.call(
                 old_job: job,
                 new_job: new_job
               )
             end
-            transaction_on([source_shard, target_shard]) do
-              new_job.save!
-              job.destroy
+            new_job
+          end
+          transaction_on([source_shard, target_shard]) do
+            target_shard.activate(:delayed_jobs) do
+              bulk_insert_jobs(new_jobs)
+            end
+            source_shard.activate(:delayed_jobs) do
+              ::Delayed::Job.delete(jobs)
             end
           end
+        end
+      end
+
+      # This is adapted from the postgreql adapter in canvas-lms
+      # Once we stop supporting rails 5.2 we can just use insert_all from activerecord
+      def bulk_insert_jobs(objects)
+        records = objects.map do |object|
+          object.attributes.map do |(name, value)|
+            next if name == ::Delayed::Job.primary_key
+
+            if (type = ::Delayed::Job.attribute_types[name]).is_a?(::ActiveRecord::Type::Serialized)
+              value = type.serialize(value)
+            end
+            [name, value]
+          end.compact.to_h
+        end
+        return if records.length.zero?
+
+        keys = records.first.keys
+
+        connection = ::Delayed::Job.connection
+        quoted_keys = keys.map { |k| connection.quote_column_name(k) }.join(', ')
+
+        connection.execute "COPY #{::Delayed::Job.quoted_table_name} (#{quoted_keys}) FROM STDIN"
+        records.map do |record|
+          connection.raw_connection.put_copy_data(keys.map { |k| quote_text(record[k]) }.join("\t") + "\n")
+        end
+        connection.clear_query_cache
+        connection.raw_connection.put_copy_end
+        result = connection.raw_connection.get_result
+        begin
+          result.check
+        rescue StandardError => e
+          raise connection.send(:translate_exception, e, 'COPY FROM STDIN')
+        end
+        result.cmd_tuples
+      end
+
+      # See above comment...
+      def quote_text(value)
+        if value.nil?
+          '\\N'
+        elsif value.is_a?(::ActiveRecord::ConnectionAdapters::PostgreSQL::OID::Array::Data)
+          quote_text(encode_array(value))
+        else
+          hash = { "\n" => '\\n', "\r" => '\\r', "\t" => '\\t', '\\' => '\\\\' }
+          value.to_s.gsub(/[\n\r\t\\]/) { |c| hash[c] }
         end
       end
     end
   end
 end
 
-# rubocop:enable Metrics/BlockLength, Metrics/MethodLength, Metrics/AbcSize, Metrics/ClassLength, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+# rubocop:enable Metrics/BlockLength, Metrics/MethodLength, Metrics/AbcSize, Metrics/ClassLength

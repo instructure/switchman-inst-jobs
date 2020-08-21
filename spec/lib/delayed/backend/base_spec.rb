@@ -25,6 +25,27 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
 
       expect(harness.class.enqueue(:fake_args)).to eq('success')
     end
+
+    it 'should enqueue with next_in_strand=true if the strand is empty and block_stranded is false' do
+      ::Switchman::Shard.current.block_stranded = false
+      ::Switchman::Shard.current.save!
+
+      Kernel.send_later_enqueue_args(:sleep, { strand: 'strand78' }, 0.1)
+      expect(Delayed::Job.where(strand: 'strand78').count).to eq 1
+      expect(Delayed::Job.where(strand: 'strand78').first.next_in_strand).to eq true
+    end
+
+    it 'should enqueue with next_in_strand=false if the strand is empty and block_stranded is true' do
+      ::Switchman::Shard.current.block_stranded = true
+      ::Switchman::Shard.current.save!
+
+      Kernel.send_later_enqueue_args(:sleep, { strand: 'strand79' }, 0.1)
+      expect(Delayed::Job.where(strand: 'strand79').count).to eq 1
+      expect(Delayed::Job.where(strand: 'strand79').first.next_in_strand).to eq false
+
+      ::Switchman::Shard.current.block_stranded = false
+      ::Switchman::Shard.current.save!
+    end
   end
 
   describe '#current_shard' do

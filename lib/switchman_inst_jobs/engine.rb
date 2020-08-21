@@ -16,6 +16,22 @@ module SwitchmanInstJobs
           block.call(worker, config)
         end
       end
+
+      # Ensure jobs get unblocked on the new shard if they exist
+      ::Delayed::Worker.lifecycle.after(:perform) do |_worker, job|
+        if job.strand
+          ::Switchman::Shard.clear_cache
+          ::Switchman::Shard.default.activate do
+            current_job_shard = ::Switchman::Shard.lookup(job.shard_id).delayed_jobs_shard
+            if current_job_shard != ::Switchman::Shard.current(:delayed_jobs)
+              current_job_shard.activate(:delayed_jobs) do
+                j = ::Delayed::Job.where(strand: job.strand).next_in_strand_order.first
+                j.update_column(:next_in_strand, true) if j && !j.next_in_strand
+              end
+            end
+          end
+        end
+      end
     end
 
     initializer 'sharding.shackles', after: 'switchman.extend_shackles' do

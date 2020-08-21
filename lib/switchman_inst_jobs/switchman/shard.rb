@@ -102,6 +102,14 @@ module SwitchmanInstJobs
           db.create_new_shard
         end
 
+        def periodic_clear_shard_cache
+          # TODO: make this configurable
+          @timed_cache ||= TimedCache.new(-> { 60.to_i.seconds.ago }) do
+            ::Switchman::Shard.clear_cache
+          end
+          @timed_cache.clear
+        end
+
         def delayed_jobs_shards
           unless instance_variable_defined?(:@delayed_jobs_shards)
             # re-entrancy protection

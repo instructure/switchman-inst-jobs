@@ -13,16 +13,32 @@ module SwitchmanInstJobs
       module Base
         module ClassMethods
           def enqueue(object, options = {})
+            ::Switchman::Shard.periodic_clear_shard_cache
+            current_shard = ::Switchman::Shard.current
             enqueue_options = options.merge(
-              current_shard: ::Switchman::Shard.current
+              current_shard: current_shard
             )
+            enqueue_job = -> { ::Shackles.activate(:master) { super(object, enqueue_options) } }
 
-            if ::ActiveRecord::Migration.open_migrations.positive?
-              ::Switchman::Shard.current.delayed_jobs_shard.activate(:delayed_jobs) do
-                super(object, enqueue_options)
-              end
+            # Another dj shard must be currently manually activated, so just use that
+            # In general this will only happen in unusual circumstances like tests
+            # also if migrations are running, always use the current shard's job shard
+            if ::ActiveRecord::Migration.open_migrations.zero? &&
+               current_shard.delayed_jobs_shard != ::Switchman::Shard.current(:delayed_jobs)
+              enqueue_job.call
             else
-              ::Shackles.activate(:master) { super(object, enqueue_options) }
+              ::Switchman::Shard.default.activate do
+                current_shard = ::Switchman::Shard.lookup(current_shard.id)
+                current_job_shard = current_shard.delayed_jobs_shard
+
+                if (options[:singleton] || options[:strand]) && current_shard.block_stranded
+                  enqueue_options[:next_in_strand] = false
+                end
+
+                current_job_shard.activate(:delayed_jobs) do
+                  enqueue_job.call
+                end
+              end
             end
           end
 
@@ -54,6 +70,7 @@ module SwitchmanInstJobs
         end
 
         def current_shard=(shard)
+          @current_shard = nil
           self.shard_id = shard.id
           self.shard_id = nil if shard.is_a?(::Switchman::DefaultShard)
           # If jobs are held for a shard, enqueue new ones as held as well
