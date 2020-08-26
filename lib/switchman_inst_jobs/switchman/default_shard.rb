@@ -8,6 +8,10 @@ module SwitchmanInstJobs
       def jobs_held
         false
       end
+
+      def block_stranded
+        false
+      end
     end
   end
 end
