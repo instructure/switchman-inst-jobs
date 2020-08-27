@@ -21,7 +21,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
     it 'should enqueue on the correct shard' do
       expect(::ActiveRecord::Migration).to receive(:open_migrations).and_return(1)
       expect(::Switchman::Shard.current.delayed_jobs_shard)
-        .to receive(:activate).once.and_return('success')
+        .to receive(:activate).at_least(:once).and_return('success')
 
       expect(harness.class.enqueue(:fake_args)).to eq('success')
     end

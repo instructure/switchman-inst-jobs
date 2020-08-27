@@ -29,15 +29,15 @@ module SwitchmanInstJobs
             else
               ::Switchman::Shard.default.activate do
                 current_shard = ::Switchman::Shard.lookup(current_shard.id)
-                current_job_shard = current_shard.delayed_jobs_shard
+              end
+              current_job_shard = current_shard.delayed_jobs_shard
 
-                if (options[:singleton] || options[:strand]) && current_shard.block_stranded
-                  enqueue_options[:next_in_strand] = false
-                end
+              if (options[:singleton] || options[:strand]) && current_shard.block_stranded
+                enqueue_options[:next_in_strand] = false
+              end
 
-                current_job_shard.activate(:delayed_jobs) do
-                  enqueue_job.call
-                end
+              current_job_shard.activate(:delayed_jobs) do
+                enqueue_job.call
               end
             end
           end
