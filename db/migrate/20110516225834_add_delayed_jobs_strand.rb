@@ -1,4 +1,3 @@
-# This migration comes from delayed_engine (originally 20110516225834)
 class AddDelayedJobsStrand < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Backend::ActiveRecord::Job.connection

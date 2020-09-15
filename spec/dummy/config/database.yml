@@ -6,3 +6,4 @@ test:
   username: <%= ENV.fetch('DB_USERNAME', '') %>
   password: <%= ENV.fetch('DB_PASSWORD', '') %>
   host: <%= ENV.fetch('DB_HOST', '') %>
+  shard_name: public

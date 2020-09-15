@@ -1,4 +1,3 @@
-# This migration comes from delayed_engine (originally 20140505223637)
 class DropFailedJobsOriginalId < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Backend::ActiveRecord::Job.connection

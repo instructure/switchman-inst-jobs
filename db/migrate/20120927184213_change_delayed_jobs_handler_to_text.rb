@@ -1,4 +1,3 @@
-# This migration comes from delayed_engine (originally 20120927184213)
 class ChangeDelayedJobsHandlerToText < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Job.connection

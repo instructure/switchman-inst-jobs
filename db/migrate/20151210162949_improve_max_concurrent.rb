@@ -1,4 +1,3 @@
-# This migration comes from delayed_engine (originally 20151210162949)
 class ImproveMaxConcurrent < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Job.connection
@@ -7,7 +6,7 @@ class ImproveMaxConcurrent < ActiveRecord::Migration[4.2]
   def up
     if connection.adapter_name == 'PostgreSQL'
       execute(<<-CODE)
-      CREATE OR REPLACE FUNCTION delayed_jobs_after_delete_row_tr_fn () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_after_delete_row_tr_fn')} () RETURNS trigger AS $$
       DECLARE
         running_count integer;
       BEGIN
@@ -23,7 +22,7 @@ class ImproveMaxConcurrent < ActiveRecord::Migration[4.2]
         END IF;
         RETURN OLD;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path TO #{::Switchman::Shard.current.name};
       CODE
     end
   end
@@ -31,7 +30,7 @@ class ImproveMaxConcurrent < ActiveRecord::Migration[4.2]
   def down
     if connection.adapter_name == 'PostgreSQL'
       execute(<<-CODE)
-      CREATE OR REPLACE FUNCTION delayed_jobs_after_delete_row_tr_fn () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_after_delete_row_tr_fn')} () RETURNS trigger AS $$
       BEGIN
         IF OLD.strand IS NOT NULL THEN
           PERFORM pg_advisory_xact_lock(half_md5_as_bigint(OLD.strand));
@@ -44,7 +43,7 @@ class ImproveMaxConcurrent < ActiveRecord::Migration[4.2]
         END IF;
         RETURN OLD;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path TO #{::Switchman::Shard.current.name};
       CODE
     end
   end

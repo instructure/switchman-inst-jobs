@@ -1,4 +1,3 @@
-# This migration comes from delayed_engine (originally 20120607164022)
 class DelayedJobsUseAdvisoryLocks < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Backend::ActiveRecord::Job.connection
@@ -11,7 +10,7 @@ class DelayedJobsUseAdvisoryLocks < ActiveRecord::Migration[4.2]
     # be much smaller
     if connection.adapter_name == 'PostgreSQL'
       execute(<<-CODE)
-      CREATE FUNCTION half_md5_as_bigint(strand varchar) RETURNS bigint AS $$
+      CREATE FUNCTION #{connection.quote_table_name('half_md5_as_bigint')}(strand varchar) RETURNS bigint AS $$
       DECLARE
         strand_md5 bytea;
       BEGIN
@@ -25,11 +24,11 @@ class DelayedJobsUseAdvisoryLocks < ActiveRecord::Migration[4.2]
                                   (get_byte(strand_md5, 6) << 8) +
                                    get_byte(strand_md5, 7);
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path TO #{::Switchman::Shard.current.name};
       CODE
 
       execute(<<-CODE)
-      CREATE OR REPLACE FUNCTION delayed_jobs_before_insert_row_tr_fn () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_before_insert_row_tr_fn')} () RETURNS trigger AS $$
       BEGIN
         PERFORM pg_advisory_xact_lock(half_md5_as_bigint(NEW.strand));
         IF (SELECT 1 FROM delayed_jobs WHERE strand = NEW.strand LIMIT 1) = 1 THEN
@@ -37,17 +36,17 @@ class DelayedJobsUseAdvisoryLocks < ActiveRecord::Migration[4.2]
         END IF;
         RETURN NEW;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path TO #{::Switchman::Shard.current.name};
       CODE
 
       execute(<<-CODE)
-      CREATE OR REPLACE FUNCTION delayed_jobs_after_delete_row_tr_fn () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_after_delete_row_tr_fn')} () RETURNS trigger AS $$
       BEGIN
         PERFORM pg_advisory_xact_lock(half_md5_as_bigint(OLD.strand));
         UPDATE delayed_jobs SET next_in_strand = 't' WHERE id = (SELECT id FROM delayed_jobs j2 WHERE j2.strand = OLD.strand ORDER BY j2.strand, j2.id ASC LIMIT 1 FOR UPDATE);
         RETURN OLD;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path TO #{::Switchman::Shard.current.name};
       CODE
     end
   end
@@ -55,7 +54,7 @@ class DelayedJobsUseAdvisoryLocks < ActiveRecord::Migration[4.2]
   def down
     if connection.adapter_name == 'PostgreSQL'
       execute(<<-CODE)
-      CREATE OR REPLACE FUNCTION delayed_jobs_before_insert_row_tr_fn () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_before_insert_row_tr_fn')} () RETURNS trigger AS $$
       BEGIN
         LOCK delayed_jobs IN SHARE ROW EXCLUSIVE MODE;
         IF (SELECT 1 FROM delayed_jobs WHERE strand = NEW.strand LIMIT 1) = 1 THEN
@@ -63,19 +62,19 @@ class DelayedJobsUseAdvisoryLocks < ActiveRecord::Migration[4.2]
         END IF;
         RETURN NEW;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path TO #{::Switchman::Shard.current.name};
       CODE
 
       execute(<<-CODE)
-      CREATE OR REPLACE FUNCTION delayed_jobs_after_delete_row_tr_fn () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_after_delete_row_tr_fn')} () RETURNS trigger AS $$
       BEGIN
         UPDATE delayed_jobs SET next_in_strand = 't' WHERE id = (SELECT id FROM delayed_jobs j2 WHERE j2.strand = OLD.strand ORDER BY j2.strand, j2.id ASC LIMIT 1 FOR UPDATE);
         RETURN OLD;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path TO #{::Switchman::Shard.current.name};
       CODE
 
-      execute('DROP FUNCTION half_md5_as_bigint(varchar)')
+      execute("DROP FUNCTION #{connection.quote_table_name('half_md5_as_bigint')}(varchar)")
     end
   end
 end

@@ -1,4 +1,3 @@
-# This migration comes from delayed_engine (originally 20181217155351)
 class SpeedUpMaxConcurrentTriggers < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Job.connection
@@ -10,7 +9,7 @@ class SpeedUpMaxConcurrentTriggers < ActiveRecord::Migration[4.2]
       # don't get the count every single time - it's usually safe to just set the next one in line
       # since the max_concurrent doesn't change all that often for a strand
       execute(<<-CODE)
-      CREATE OR REPLACE FUNCTION delayed_jobs_after_delete_row_tr_fn () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_after_delete_row_tr_fn')} () RETURNS trigger AS $$
       DECLARE
         running_count integer;
       BEGIN
@@ -34,12 +33,12 @@ class SpeedUpMaxConcurrentTriggers < ActiveRecord::Migration[4.2]
         END IF;
         RETURN OLD;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path TO #{::Switchman::Shard.current.name};
       CODE
 
       # don't need the full count on insert
       execute(<<-CODE)
-      CREATE OR REPLACE FUNCTION delayed_jobs_before_insert_row_tr_fn () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_before_insert_row_tr_fn')} () RETURNS trigger AS $$
       BEGIN
         IF NEW.strand IS NOT NULL THEN
           PERFORM pg_advisory_xact_lock(half_md5_as_bigint(NEW.strand));
@@ -51,7 +50,7 @@ class SpeedUpMaxConcurrentTriggers < ActiveRecord::Migration[4.2]
         END IF;
         RETURN NEW;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path TO #{::Switchman::Shard.current.name};
       CODE
     end
   end
@@ -59,7 +58,7 @@ class SpeedUpMaxConcurrentTriggers < ActiveRecord::Migration[4.2]
   def down
     if connection.adapter_name == 'PostgreSQL'
       execute(<<-CODE)
-      CREATE OR REPLACE FUNCTION delayed_jobs_after_delete_row_tr_fn () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_after_delete_row_tr_fn')} () RETURNS trigger AS $$
       DECLARE
         running_count integer;
       BEGIN
@@ -75,11 +74,11 @@ class SpeedUpMaxConcurrentTriggers < ActiveRecord::Migration[4.2]
         END IF;
         RETURN OLD;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path TO #{::Switchman::Shard.current.name};
       CODE
 
       execute(<<-CODE)
-      CREATE OR REPLACE FUNCTION delayed_jobs_before_insert_row_tr_fn () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_before_insert_row_tr_fn')} () RETURNS trigger AS $$
       BEGIN
         IF NEW.strand IS NOT NULL THEN
           PERFORM pg_advisory_xact_lock(half_md5_as_bigint(NEW.strand));
@@ -89,7 +88,7 @@ class SpeedUpMaxConcurrentTriggers < ActiveRecord::Migration[4.2]
         END IF;
         RETURN NEW;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path TO #{::Switchman::Shard.current.name};
       CODE
     end
   end

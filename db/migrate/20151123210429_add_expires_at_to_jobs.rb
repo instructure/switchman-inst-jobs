@@ -1,4 +1,3 @@
-# This migration comes from delayed_engine (originally 20151123210429)
 class AddExpiresAtToJobs < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Job.connection

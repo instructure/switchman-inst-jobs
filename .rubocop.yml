@@ -7,7 +7,7 @@ AllCops:
 Layout/LineLength:
   Max: 120 # Default: 80
   Exclude:
-    - spec/dummy/db/migrate/*.rb
+    - db/migrate/*.rb
 
 Layout/MultilineMethodCallIndentation:
   EnforcedStyle: indented # Default: aligned
@@ -18,7 +18,7 @@ Layout/ParameterAlignment:
 Metrics/AbcSize:
   Max: 30 # Default: 15
   Exclude:
-    - spec/dummy/db/migrate/*.rb
+    - db/migrate/*.rb
 
 Metrics/BlockLength:
   Exclude:
@@ -28,11 +28,11 @@ Metrics/BlockLength:
 Metrics/MethodLength:
   Max: 25 # Default: 10
   Exclude:
-    - spec/dummy/db/migrate/*.rb
+    - '**/migrate/*.rb'
 
 Metrics/ClassLength:
   Exclude:
-    - spec/dummy/db/migrate/*.rb
+    - '**/migrate/*.rb'
 
 Naming/FileName:
   Exclude:
@@ -54,4 +54,4 @@ Style/FrozenStringLiteralComment:
 
 Style/GuardClause:
   Exclude:
-    - spec/dummy/db/migrate/*.rb
+    - '**/migrate/*.rb'

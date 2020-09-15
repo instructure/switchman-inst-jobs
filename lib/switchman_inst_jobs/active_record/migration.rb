@@ -17,6 +17,16 @@ module SwitchmanInstJobs
       ensure
         ::ActiveRecord::Migration.open_migrations -= 1
       end
+
+      def copy(destination, sources, options = {})
+        if sources.delete('delayed_engine')
+          # rubocop:disable Rails/Output
+          puts 'NOTE: Not installing delayed_engine migrations in an application using switchman-inst-jobs'
+          puts '(use rake switchman_inst_jobs:install:migrations instead)'
+          # rubocop:enable Rails/Output
+        end
+        super
+      end
     end
   end
 end

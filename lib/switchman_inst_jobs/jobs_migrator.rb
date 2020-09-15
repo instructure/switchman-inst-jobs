@@ -183,12 +183,14 @@ module SwitchmanInstJobs
           # Adapted from get_and_lock_next_available in delayed/backend/active_record.rb
           target_jobs = scope.limit(1000).lock('FOR UPDATE SKIP LOCKED')
 
-          query = "WITH limited_jobs AS (#{target_jobs.to_sql}) " \
-                  "UPDATE #{::Delayed::Job.quoted_table_name} " \
-                  "SET locked_by = #{::Delayed::Job.connection.quote(::Delayed::Backend::Base::ON_HOLD_LOCKED_BY)}, " \
-                  "locked_at = #{::Delayed::Job.connection.quote(::Delayed::Job.db_time_now)} "\
-                  "FROM limited_jobs WHERE limited_jobs.id=#{::Delayed::Job.quoted_table_name}.id " \
-                  "RETURNING #{::Delayed::Job.quoted_table_name}.*"
+          query = source_shard.activate(:delayed_jobs) do
+            "WITH limited_jobs AS (#{target_jobs.to_sql}) " \
+            "UPDATE #{::Delayed::Job.quoted_table_name} " \
+            "SET locked_by = #{::Delayed::Job.connection.quote(::Delayed::Backend::Base::ON_HOLD_LOCKED_BY)}, " \
+            "locked_at = #{::Delayed::Job.connection.quote(::Delayed::Job.db_time_now)} "\
+            "FROM limited_jobs WHERE limited_jobs.id=#{::Delayed::Job.quoted_table_name}.id " \
+            "RETURNING #{::Delayed::Job.quoted_table_name}.*"
+          end
 
           jobs = source_shard.activate(:delayed_jobs) { ::Delayed::Job.find_by_sql(query) }
           new_jobs = jobs.map do |job|

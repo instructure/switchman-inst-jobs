@@ -1,4 +1,3 @@
-# This migration comes from delayed_engine (originally 20161206323555)
 class AddBackDefaultStringLimitsJobs < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Job.connection
@@ -23,13 +22,13 @@ class AddBackDefaultStringLimitsJobs < ActiveRecord::Migration[4.2]
   end
 
   def drop_triggers
-    execute %(DROP TRIGGER delayed_jobs_before_insert_row_tr ON delayed_jobs)
-    execute %(DROP TRIGGER delayed_jobs_after_delete_row_tr ON delayed_jobs)
+    execute %(DROP TRIGGER delayed_jobs_before_insert_row_tr ON #{::Delayed::Job.quoted_table_name})
+    execute %(DROP TRIGGER delayed_jobs_after_delete_row_tr ON #{::Delayed::Job.quoted_table_name})
   end
 
   def readd_triggers
-    execute('CREATE TRIGGER delayed_jobs_before_insert_row_tr BEFORE INSERT ON delayed_jobs FOR EACH ROW WHEN (NEW.strand IS NOT NULL) EXECUTE PROCEDURE delayed_jobs_before_insert_row_tr_fn()')
-    execute("CREATE TRIGGER delayed_jobs_after_delete_row_tr AFTER DELETE ON delayed_jobs FOR EACH ROW WHEN (OLD.strand IS NOT NULL AND OLD.next_in_strand = 't') EXECUTE PROCEDURE delayed_jobs_after_delete_row_tr_fn()")
+    execute("CREATE TRIGGER delayed_jobs_before_insert_row_tr BEFORE INSERT ON #{::Delayed::Job.quoted_table_name} FOR EACH ROW WHEN (NEW.strand IS NOT NULL) EXECUTE PROCEDURE #{connection.quote_table_name('delayed_jobs_before_insert_row_tr_fn')}()")
+    execute("CREATE TRIGGER delayed_jobs_after_delete_row_tr AFTER DELETE ON #{::Delayed::Job.quoted_table_name} FOR EACH ROW WHEN (OLD.strand IS NOT NULL AND OLD.next_in_strand = 't') EXECUTE PROCEDURE #{connection.quote_table_name('delayed_jobs_after_delete_row_tr_fn')}()")
   end
 
   def add_string_limit_if_missing(table, column)

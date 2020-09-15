@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'inst-jobs', '>= 0.16', '< 0.17'
   s.add_dependency 'parallel', '>= 1.19'
   s.add_dependency 'railties', '>= 5.2', '< 6.1'
-  s.add_dependency 'switchman', '>= 1.14', '< 1.16'
+  s.add_dependency 'switchman', '>= 1.16', '< 1.17'
 
   s.add_development_dependency 'bundler'
   s.add_development_dependency 'byebug'

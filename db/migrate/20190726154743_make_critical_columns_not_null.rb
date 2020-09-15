@@ -1,4 +1,3 @@
-# This migration comes from delayed_engine (originally 20190726154743)
 class MakeCriticalColumnsNotNull < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Job.connection

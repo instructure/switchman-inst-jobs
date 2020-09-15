@@ -1,4 +1,3 @@
-# This migration comes from delayed_engine (originally 20120608191051)
 class AddJobsRunAtIndex < ActiveRecord::Migration[4.2]
   disable_ddl_transaction! if respond_to?(:disable_ddl_transaction!)
 

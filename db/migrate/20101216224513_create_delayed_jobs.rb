@@ -1,4 +1,3 @@
-# This migration comes from delayed_engine (originally 20101216224513)
 class CreateDelayedJobs < ActiveRecord::Migration[4.2]
   def connection
     Delayed::Backend::ActiveRecord::Job.connection
@@ -30,7 +29,7 @@ class CreateDelayedJobs < ActiveRecord::Migration[4.2]
       # Who is working on this object (if locked)
       table.string   :locked_by
 
-      table.timestamps null: true
+      table.timestamps
     end
 
     add_index :delayed_jobs, %i[priority run_at], name: 'delayed_jobs_priority'
