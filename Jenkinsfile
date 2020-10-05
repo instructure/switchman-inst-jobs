@@ -24,7 +24,7 @@ pipeline {
             steps {
                 sh '''
                     docker-compose run --rm app /bin/bash -l -c \
-                        "rvm-exec 2.4 bundle exec rubocop --fail-level autocorrect"
+                        "rvm-exec 2.5 bundle exec rubocop --fail-level autocorrect"
                     docker-compose run --name coverage app
                 '''
             }

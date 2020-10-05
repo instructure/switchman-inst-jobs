@@ -15,8 +15,8 @@ RUN mkdir -p /app/coverage \
              /app/spec/dummy/log \
              /app/spec/dummy/tmp
 
-RUN /bin/bash -lc "cd /app && rvm-exec 2.4 bundle install --jobs 5"
+RUN /bin/bash -lc "cd /app && rvm-exec 2.5 bundle install --jobs 5"
 RUN /bin/bash -lc "rvm-exec 2.7 gem install bundler -v '1.17.3'"
 COPY --chown=docker:docker . /app
 
-CMD /bin/bash -lc "rvm-exec 2.4 bundle exec wwtd"
+CMD /bin/bash -lc "rvm-exec 2.5 bundle exec wwtd"

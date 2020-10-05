@@ -1,5 +1,5 @@
 module SwitchmanInstJobs
-  module Shackles
+  module GuardRail
     module ClassMethods
       def activate(env, &block)
         if ::ActiveRecord::Migration.open_migrations.positive?

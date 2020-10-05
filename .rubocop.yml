@@ -2,7 +2,7 @@ require: rubocop-rails
 
 AllCops:
   TargetRailsVersion: 5.2
-  TargetRubyVersion: 2.4
+  TargetRubyVersion: 2.5
 
 Layout/LineLength:
   Max: 120 # Default: 80

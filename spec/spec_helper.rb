@@ -1,4 +1,4 @@
-if /^2\.4/ =~ RUBY_VERSION && /5\.2/ =~ ENV['BUNDLE_GEMFILE'] # Limit coverage to one build
+if /^2\.5/ =~ RUBY_VERSION && /5\.2/ =~ ENV['BUNDLE_GEMFILE'] # Limit coverage to one build
   require 'simplecov'
 
   SimpleCov.start do

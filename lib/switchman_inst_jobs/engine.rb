@@ -34,8 +34,8 @@ module SwitchmanInstJobs
       end
     end
 
-    initializer 'sharding.shackles', after: 'switchman.extend_shackles' do
-      SwitchmanInstJobs.initialize_shackles
+    initializer 'sharding.guard_rail', after: 'switchman.extend_guard_rail' do
+      SwitchmanInstJobs.initialize_guard_rail
     end
 
     initializer 'sharding.switchman' do

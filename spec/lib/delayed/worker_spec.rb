@@ -21,17 +21,15 @@ describe SwitchmanInstJobs::Delayed::Worker do
     end
 
     it 'appends current shard to health check service name' do
-      begin
-        Delayed::Settings.worker_health_check_type = :consul
-        Delayed::Settings.worker_health_check_config['service_name'] = 'inst-jobs'
-        worker = Delayed::Worker.new
-        expect(worker.health_check.send(:service_name))
-          .to eq "inst-jobs/#{Switchman::Shard.default.id}"
-        expect(Delayed::Settings.worker_health_check_config['service_name']).to eq 'inst-jobs'
-      ensure
-        Delayed::Settings.worker_health_check_type = :none
-        Delayed::Settings.worker_health_check_config.clear
-      end
+      Delayed::Settings.worker_health_check_type = :consul
+      Delayed::Settings.worker_health_check_config['service_name'] = 'inst-jobs'
+      worker = Delayed::Worker.new
+      expect(worker.health_check.send(:service_name))
+        .to eq "inst-jobs/#{Switchman::Shard.default.id}"
+      expect(Delayed::Settings.worker_health_check_config['service_name']).to eq 'inst-jobs'
+    ensure
+      Delayed::Settings.worker_health_check_type = :none
+      Delayed::Settings.worker_health_check_config.clear
     end
   end
 end

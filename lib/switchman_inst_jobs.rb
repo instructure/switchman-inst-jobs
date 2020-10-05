@@ -25,8 +25,8 @@ module SwitchmanInstJobs
     ::Object.include Delayed::MessageSending
   end
 
-  def self.initialize_shackles
-    ::Shackles.singleton_class.prepend Shackles::ClassMethods
+  def self.initialize_guard_rail
+    ::GuardRail.singleton_class.prepend GuardRail::ClassMethods
   end
 
   def self.initialize_switchman
@@ -44,9 +44,9 @@ require 'switchman_inst_jobs/delayed/pool'
 require 'switchman_inst_jobs/delayed/worker'
 require 'switchman_inst_jobs/delayed/worker/health_check'
 require 'switchman_inst_jobs/engine'
+require 'switchman_inst_jobs/guard_rail'
 require 'switchman_inst_jobs/jobs_migrator'
 require 'switchman_inst_jobs/new_relic'
-require 'switchman_inst_jobs/shackles'
 require 'switchman_inst_jobs/switchman/database_server'
 require 'switchman_inst_jobs/switchman/default_shard'
 require 'switchman_inst_jobs/switchman/shard'
