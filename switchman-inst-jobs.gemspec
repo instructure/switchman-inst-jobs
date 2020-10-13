@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '>= 2.5'
 
-  s.add_dependency 'inst-jobs', '>= 0.16', '< 0.17'
+  s.add_dependency 'inst-jobs', '~> 1.0'
   s.add_dependency 'parallel', '>= 1.19'
   s.add_dependency 'railties', '>= 5.2', '< 6.1'
   s.add_dependency 'switchman', '~> 2.0'
@@ -27,7 +27,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'newrelic_rpm'
   s.add_development_dependency 'pg', '~> 1.0'
   s.add_development_dependency 'pry', '~> 0'
-  s.add_development_dependency 'rake', '~> 12'
+  s.add_development_dependency 'rake', '~> 13'
   s.add_development_dependency 'rspec', '~> 3.6'
   s.add_development_dependency 'rspec-rails', '~> 3.6'
   s.add_development_dependency 'rubocop', '~> 0.79.0'

@@ -17,14 +17,14 @@ describe SwitchmanInstJobs::JobsMigrator do
 
     Switchman::Shard.activate(primary: shard1, delayed_jobs: Switchman::Shard.default) do
       expect(Switchman::Shard.current(:delayed_jobs)).to eq Switchman::Shard.default
-      5.times { Kernel.send_later_enqueue_args(:sleep, { strand: 'strand1' }, 0.1) }
-      6.times { Kernel.send_later_enqueue_args(:sleep, { strand: 'strand2' }, 0.2) }
-      7.times { Kernel.send_later_enqueue_args(:sleep, {}, 0.3) }
+      5.times { Kernel.delay(strand: 'strand1').sleep(0.1) }
+      6.times { Kernel.delay(strand: 'strand2').sleep(0.2) }
+      7.times { Kernel.delay.sleep(0.3) }
     end
-    4.times { Kernel.send_later_enqueue_args(:sleep, {}, 0.4) }
+    4.times { Kernel.delay.sleep(0.4) }
 
     shard1.activate(:primary, :delayed_jobs) do
-      3.times { Kernel.send_later_enqueue_args(:sleep, { strand: 'strand1' }, 0.5) }
+      3.times { Kernel.delay(strand: 'strand1').sleep(0.5) }
       expect(Delayed::Job.count).to eq 3
     end
 
@@ -49,7 +49,7 @@ describe SwitchmanInstJobs::JobsMigrator do
 
   it 'should create a blocker strand if a job is currently running' do
     Switchman::Shard.activate(primary: shard1, delayed_jobs: Switchman::Shard.default) do
-      5.times { Kernel.send_later_enqueue_args(:sleep, { strand: 'strand1' }, 0.1) }
+      5.times { Kernel.delay(strand: 'strand1').sleep(0.1) }
     end
     Delayed::Job.where(shard_id: shard1.id, strand: 'strand1').next_in_strand_order.first
       .update(locked_by: 'specs', locked_at: DateTime.now)
@@ -78,7 +78,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       described_class.add_before_move_callback(->(old_job:, new_job:) { @old_job = old_job })
       # rubocop:enable Lint/UnusedBlockArgument
       Switchman::Shard.activate(primary: shard1, delayed_jobs: Switchman::Shard.default) do
-        Kernel.send_later_enqueue_args(:sleep, strand: 'strand', no_delay: true)
+        Kernel.delay(strand: 'strand', ignore_transaction: true).sleep(0)
       end
       described_class.run
       expect(@old_job.shard).to eq(Switchman::Shard.default)
@@ -90,7 +90,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       described_class.add_before_move_callback(->(old_job:, new_job:) { @new_job = new_job })
       # rubocop:enable Lint/UnusedBlockArgument
       Switchman::Shard.activate(primary: shard1, delayed_jobs: Switchman::Shard.default) do
-        Kernel.send_later_enqueue_args(:sleep, strand: 'strand', no_delay: true)
+        Kernel.delay(strand: 'strand', ignore_transaction: true).sleep(0)
       end
       described_class.run
       expect(@new_job.shard).to eq(shard1)
@@ -102,7 +102,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       described_class.add_before_move_callback(->(old_job:, new_job:) { @new_job = new_job })
       # rubocop:enable Lint/UnusedBlockArgument
       Switchman::Shard.activate(primary: shard1, delayed_jobs: Switchman::Shard.default) do
-        Kernel.send_later_enqueue_args(:sleep, strand: 'strand', no_delay: true)
+        Kernel.delay(strand: 'strand', ignore_transaction: true).sleep(0)
       end
       described_class.run
       expect(@new_job.new_record?).to be true

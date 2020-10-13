@@ -30,7 +30,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
       ::Switchman::Shard.current.block_stranded = false
       ::Switchman::Shard.current.save!
 
-      Kernel.send_later_enqueue_args(:sleep, { strand: 'strand78' }, 0.1)
+      Kernel.delay(strand: 'strand78').sleep(0.1)
       expect(Delayed::Job.where(strand: 'strand78').count).to eq 1
       expect(Delayed::Job.where(strand: 'strand78').first.next_in_strand).to eq true
     end
@@ -39,7 +39,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
       ::Switchman::Shard.current.block_stranded = true
       ::Switchman::Shard.current.save!
 
-      Kernel.send_later_enqueue_args(:sleep, { strand: 'strand79' }, 0.1)
+      Kernel.delay(strand: 'strand79').sleep(0.1)
       expect(Delayed::Job.where(strand: 'strand79').count).to eq 1
       expect(Delayed::Job.where(strand: 'strand79').first.next_in_strand).to eq false
 
@@ -72,7 +72,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
       shard.unhold_jobs!
       job = nil
       shard.activate do
-        job = 'string'.send_later_enqueue_args(:size, no_delay: true)
+        job = 'string'.delay(ignore_transaction: true).size
       end
       expect(job.locked_by).to be_nil
       expect(job.locked_at).to be_nil
@@ -82,7 +82,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
       shard.hold_jobs!
       job = nil
       shard.activate do
-        job = 'string'.send_later_enqueue_args(:size, no_delay: true)
+        job = 'string'.delay(ignore_transaction: true).size
       end
       expect(job.locked_by).to_not be_nil
       expect(job.locked_at).to_not be_nil
@@ -99,7 +99,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
       job = nil
 
       shard.activate do
-        job = 'string'.send_later_enqueue_args(:size, no_delay: true)
+        job = 'string'.delay(ignore_transaction: true).size
       end
       expect(job).not_to be_nil
       expect(job.current_shard).to eq shard

@@ -18,7 +18,7 @@ describe SwitchmanInstJobs::Delayed::Worker::HealthCheck do
 
       ran_on_shards = []
       expect(Delayed::Job).to receive(:running_jobs).never
-      expect(Delayed::Worker::HealthCheck).to receive(:send_later_enqueue_args).twice do
+      expect(Delayed::Worker::HealthCheck).to receive(:delay).twice do
         ran_on_shards << Switchman::Shard.current(:delayed_jobs)
       end
       Delayed::Worker::HealthCheck.reschedule_abandoned_jobs

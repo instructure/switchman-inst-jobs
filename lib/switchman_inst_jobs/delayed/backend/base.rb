@@ -12,13 +12,13 @@ module SwitchmanInstJobs
     module Backend
       module Base
         module ClassMethods
-          def enqueue(object, options = {})
+          def enqueue(object, **options)
             ::Switchman::Shard.periodic_clear_shard_cache
             current_shard = ::Switchman::Shard.current
             enqueue_options = options.merge(
               current_shard: current_shard
             )
-            enqueue_job = -> { ::GuardRail.activate(:master) { super(object, enqueue_options) } }
+            enqueue_job = -> { ::GuardRail.activate(:master) { super(object, **enqueue_options) } }
 
             # Another dj shard must be currently manually activated, so just use that
             # In general this will only happen in unusual circumstances like tests

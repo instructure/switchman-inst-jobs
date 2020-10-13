@@ -32,9 +32,7 @@ module SwitchmanInstJobs
               singleton = <<~SINGLETON
                 periodic: Delayed::Worker::HealthCheck.reschedule_abandoned_jobs:#{shard.id}
               SINGLETON
-              send_later_enqueue_args(
-                :reschedule_abandoned_jobs, { singleton: singleton }, call_super: shard
-              )
+              delay(singleton: singleton).reschedule_abandoned_jobs(call_super: shard)
             end
           end
         end

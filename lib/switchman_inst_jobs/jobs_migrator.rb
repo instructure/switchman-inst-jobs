@@ -95,7 +95,7 @@ module SwitchmanInstJobs
                 first = this_strand_scope.where('locked_by IS NOT NULL').next_in_strand_order.lock.first
                 if first
                   first_job = ::Delayed::Job.create!(strand: strand, next_in_strand: false)
-                  first_job.payload_object = ::Delayed::PerformableMethod.new(Kernel, :sleep, [0])
+                  first_job.payload_object = ::Delayed::PerformableMethod.new(Kernel, :sleep, args: [0])
                   first_job.queue = first.queue
                   first_job.tag = 'Kernel.sleep'
                   first_job.source = 'JobsMigrator::StrandBlocker'

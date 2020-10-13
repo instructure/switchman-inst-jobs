@@ -4,12 +4,10 @@ describe SwitchmanInstJobs::Delayed::MessageSending do
       project.shard.activate do
         ::Delayed::Batch.serial_batch do
           expect(
-            'string'.send_later_enqueue_args(:size, no_delay: true)
+            'string'.delay(ignore_transaction: true).size
           ).to be true
           expect(
-            'string'.send_later_enqueue_args(
-              :gsub, { no_delay: true }, /./, '!'
-            )
+            'string'.delay(ignore_transaction: true).gsub(/./, '!')
           ).to be true
         end
       end
