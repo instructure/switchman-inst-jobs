@@ -111,32 +111,27 @@ module SwitchmanInstJobs
         end
 
         def delayed_jobs_shards
-          unless instance_variable_defined?(:@delayed_jobs_shards)
-            # re-entrancy protection
-            @delayed_jobs_shards = begin
-              shard_dj_shards = [] unless ::Switchman::Shard.columns_hash.key?('delayed_jobs_shard_id')
-              shard_dj_shards ||= begin
-                ::Switchman::Shard.
-                  where.not(delayed_jobs_shard_id: nil).
-                  distinct.
-                  pluck(:delayed_jobs_shard_id).
-                  map { |id| ::Switchman::Shard.lookup(id) }.
-                  compact
-              end
-              # set it temporarily, to avoid the default shard falling back to itself
-              # if other shards are usable
-              @delayed_jobs_shards = shard_dj_shards.uniq.sort
+          return none unless ::Switchman::Shard.columns_hash.key?('delayed_jobs_shard_id')
 
-              db_dj_shards = ::Switchman::DatabaseServer.all.map do |db|
-                next db.shards.to_a if db.config[:delayed_jobs_shard] == 'self'
+          scope = ::Switchman::Shard.unscoped.
+            where(id: ::Switchman::Shard.unscoped.distinct.where.not(delayed_jobs_shard_id: nil).
+            select(:delayed_jobs_shard_id))
+          db_jobs_shards = ::Switchman::DatabaseServer.all.map { |db| db.config[:delayed_jobs_shard] }.uniq
+          db_jobs_shards.delete(nil)
+          has_self = db_jobs_shards.delete('self')
+          scope = scope.or(::Switchman::Shard.unscoped.where(id: db_jobs_shards)) unless db_jobs_shards.empty?
 
-                db.delayed_jobs_shard
-              end.compact.flatten.uniq # yes, all three
-
-              (db_dj_shards + shard_dj_shards).uniq.sort
-            end
+          if has_self
+            self_dbs = ::Switchman::DatabaseServer.all.
+              select { |db| db.config[:delayed_jobs_shard] == 'self' }.map(&:id)
+            scope = scope.or(::Switchman::Shard.unscoped.
+              where(id: ::Switchman::Shard.unscoped.where(delayed_jobs_shard_id: nil, database_server_id: self_dbs).
+              select(:id)))
           end
-          @delayed_jobs_shards
+          @jobs_scope_empty = !scope.exists? unless instance_variable_defined?(:@jobs_scope_empty)
+          return [::Switchman::Shard.default] if @jobs_scope_empty
+
+          ::Switchman::Shard.merge(scope)
         end
       end
     end

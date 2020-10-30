@@ -19,7 +19,7 @@ Layout/ParameterAlignment:
   EnforcedStyle: with_fixed_indentation # Default: with_first_parameter
 
 Metrics/AbcSize:
-  Max: 30 # Default: 15
+  Max: 45 # Default: 15
   Exclude:
     - db/migrate/*.rb
 

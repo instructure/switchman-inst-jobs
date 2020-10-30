@@ -49,6 +49,9 @@ RSpec.configure do |config|
       Switchman::Shard.create!(default: true)
       Switchman::Shard.default(reload: true)
     end
+    if ::Switchman::Shard.instance_variable_defined?(:@jobs_scope_empty)
+      ::Switchman::Shard.remove_instance_variable(:@jobs_scope_empty)
+    end
     example.run
   end
 end

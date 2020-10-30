@@ -19,7 +19,7 @@ module SwitchmanInstJobs
           end
 
           def reschedule_abandoned_jobs(call_super: false)
-            shards = ::Switchman::Shard.delayed_jobs_shards
+            shards = ::Switchman::Shard.delayed_jobs_shards.to_a
             call_super = shards.first if shards.length == 1
             unless call_super == false
               call_super.activate(:delayed_jobs) do

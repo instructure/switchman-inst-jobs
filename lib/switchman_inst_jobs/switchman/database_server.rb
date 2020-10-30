@@ -11,7 +11,7 @@ module SwitchmanInstJobs
         # shard's delayed_jobs_shard
         if shard&.default?
           # first look for any shard that behaves like a jobs shard
-          dj_shard ||= ::Switchman::Shard.delayed_jobs_shards.first
+          dj_shard ||= ::Switchman::Shard.delayed_jobs_shards.find(&:database_server)
           # we're really truly out of options, use the default shard itself
           dj_shard ||= shard
         end
