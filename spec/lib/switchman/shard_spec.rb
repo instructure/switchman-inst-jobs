@@ -21,9 +21,9 @@ describe SwitchmanInstJobs::Switchman::Shard do
 
     it 'returns another dj shard for the default shard' do
       skip 'broken on newer rubies when un-stubbing the prepended class method'
-      expect(::Switchman::Shard).to receive(:delayed_jobs_shards)
-        .at_least(1)
-        .and_return([jobs_shard])
+      expect(::Switchman::Shard).to receive(:delayed_jobs_shards).
+        at_least(1).
+        and_return([jobs_shard])
       expect(shard.delayed_jobs_shard).to eq jobs_shard
     end
   end
@@ -46,8 +46,8 @@ describe SwitchmanInstJobs::Switchman::Shard do
 
   describe '.create' do
     it 'uses DatabaseServer to configure new shard' do
-      expect(::Switchman::DatabaseServer)
-        .to receive(:server_for_new_shard).once.and_call_original
+      expect(::Switchman::DatabaseServer).
+        to receive(:server_for_new_shard).once.and_call_original
       ::Switchman::Shard.create
     end
 

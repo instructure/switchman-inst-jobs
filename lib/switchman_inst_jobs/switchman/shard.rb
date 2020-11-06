@@ -28,9 +28,9 @@ module SwitchmanInstJobs
         return unless wait
 
         delayed_jobs_shard.activate(:delayed_jobs) do
-          while ::Delayed::Job.where(shard_id: id)
-              .where.not(locked_at: nil)
-              .where.not(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY).exists?
+          while ::Delayed::Job.where(shard_id: id).
+              where.not(locked_at: nil).
+              where.not(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY).exists?
             sleep 10
             lock_jobs_for_hold
           end
@@ -41,9 +41,9 @@ module SwitchmanInstJobs
         self.jobs_held = false
         save! if changed?
         delayed_jobs_shard.activate(:delayed_jobs) do
-          ::Delayed::Job.where(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY, shard_id: id)
-            .in_batches(of: 10_000)
-            .update_all(
+          ::Delayed::Job.where(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY, shard_id: id).
+            in_batches(of: 10_000).
+            update_all(
               locked_by: nil,
               locked_at: nil,
               attempts: 0,
@@ -116,12 +116,12 @@ module SwitchmanInstJobs
             @delayed_jobs_shards = begin
               shard_dj_shards = [] unless ::Switchman::Shard.columns_hash.key?('delayed_jobs_shard_id')
               shard_dj_shards ||= begin
-                ::Switchman::Shard
-                  .where.not(delayed_jobs_shard_id: nil)
-                  .distinct
-                  .pluck(:delayed_jobs_shard_id)
-                  .map { |id| ::Switchman::Shard.lookup(id) }
-                  .compact
+                ::Switchman::Shard.
+                  where.not(delayed_jobs_shard_id: nil).
+                  distinct.
+                  pluck(:delayed_jobs_shard_id).
+                  map { |id| ::Switchman::Shard.lookup(id) }.
+                  compact
               end
               # set it temporarily, to avoid the default shard falling back to itself
               # if other shards are usable

@@ -20,8 +20,8 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
   describe '#enqueue' do
     it 'should enqueue on the correct shard' do
       expect(::ActiveRecord::Migration).to receive(:open_migrations).and_return(1)
-      expect(::Switchman::Shard.current.delayed_jobs_shard)
-        .to receive(:activate).at_least(:once).and_return('success')
+      expect(::Switchman::Shard.current.delayed_jobs_shard).
+        to receive(:activate).at_least(:once).and_return('success')
 
       expect(harness.class.enqueue(:fake_args)).to eq('success')
     end
@@ -94,8 +94,8 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
     it 'should activate the associated job shard' do
       payload_object = double
       expect(payload_object).to receive(:perform).once
-      expect_any_instance_of(::Delayed::Backend::Base)
-        .to receive(:payload_object) { payload_object }
+      expect_any_instance_of(::Delayed::Backend::Base).
+        to receive(:payload_object) { payload_object }
       job = nil
 
       shard.activate do
@@ -118,14 +118,14 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
     it 'raises an error for invalid shards' do
       unused_id = ::Switchman::Shard.maximum(:id) + 1
       harness.shard_id = unused_id
-      expect { harness.deserialize('') }
-        .to raise_error("Shard not found: #{unused_id}")
+      expect { harness.deserialize('') }.
+        to raise_error("Shard not found: #{unused_id}")
     end
 
     it 'standardizes db failures' do
       # if a shard no longer exists, trying to use it for this job will bomb
-      expect_any_instance_of(::Delayed::Backend::Base)
-        .to receive(:deserialize).once.and_raise(PG::ConnectionBad)
+      expect_any_instance_of(::Delayed::Backend::Base).
+        to receive(:deserialize).once.and_raise(PG::ConnectionBad)
 
       payload = ::Delayed::PerformableMethod.new(project, :id)
       job = ::Delayed::Job.create! payload_object: payload
@@ -137,13 +137,13 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
 
       reloaded_job = ::Delayed::Job.find_available(1).first
 
-      expect { reloaded_job.invoke_job }
-        .to raise_error("Shard not found: #{destroyed_shard_id}")
+      expect { reloaded_job.invoke_job }.
+        to raise_error("Shard not found: #{destroyed_shard_id}")
     end
 
     it 'passes exception through if the shard still exists' do
-      expect_any_instance_of(::Delayed::Backend::Base)
-        .to receive(:deserialize).once.and_raise(PG::ConnectionBad)
+      expect_any_instance_of(::Delayed::Backend::Base).
+        to receive(:deserialize).once.and_raise(PG::ConnectionBad)
 
       payload = ::Delayed::PerformableMethod.new(project, :id)
       job = ::Delayed::Job.create! payload_object: payload
@@ -152,8 +152,8 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
 
       reloaded_job = ::Delayed::Job.find_available(1).first
 
-      expect { reloaded_job.invoke_job }
-        .to raise_error(PG::ConnectionBad)
+      expect { reloaded_job.invoke_job }.
+        to raise_error(PG::ConnectionBad)
     end
   end
 end

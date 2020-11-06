@@ -106,8 +106,8 @@ module SwitchmanInstJobs
                   first_job.save!
                   # the rest of 3) is taken care of here
                   # make sure that all the jobs moved over are NOT next in strand
-                  ::Delayed::Job.where(next_in_strand: true, strand: strand, locked_by: nil)
-                    .update_all(next_in_strand: false)
+                  ::Delayed::Job.where(next_in_strand: true, strand: strand, locked_by: nil).
+                    update_all(next_in_strand: false)
                 end
 
                 # 4) is taken care of here, by leaveing next_in_strand alone and
@@ -136,10 +136,10 @@ module SwitchmanInstJobs
             # but actually could have run and we just didn't know it because we didn't know if they had jobs
             # on the source shard
             # rubocop:disable Layout/LineLength
-            strands_to_unblock = shard_scope.where.not(source: 'JobsMigrator::StrandBlocker')
-              .distinct
-              .where("NOT EXISTS (SELECT 1 FROM #{::Delayed::Job.quoted_table_name} dj2 WHERE delayed_jobs.strand=dj2.strand AND next_in_strand)")
-              .pluck(:strand)
+            strands_to_unblock = shard_scope.where.not(source: 'JobsMigrator::StrandBlocker').
+              distinct.
+              where("NOT EXISTS (SELECT 1 FROM #{::Delayed::Job.quoted_table_name} dj2 WHERE delayed_jobs.strand=dj2.strand AND next_in_strand)").
+              pluck(:strand)
             # rubocop:enable Layout/LineLength
             strands_to_unblock.each do |strand|
               Delayed::Job.where(strand: strand).next_in_strand_order.first.update_attribute(:next_in_strand, true)

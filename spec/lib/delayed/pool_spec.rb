@@ -5,8 +5,8 @@ describe SwitchmanInstJobs::Delayed::Pool do
   describe 'pools' do
     it "should unlock against the worker's shard" do
       allow(Delayed::Job).to receive(:unlock_orphaned_jobs) do
-        expect(Switchman::Shard.current(:delayed_jobs))
-          .to eq Switchman::Shard.default.delayed_jobs_shard
+        expect(Switchman::Shard.current(:delayed_jobs)).
+          to eq Switchman::Shard.default.delayed_jobs_shard
         0
       end
       Delayed::Pool.new({}).send(

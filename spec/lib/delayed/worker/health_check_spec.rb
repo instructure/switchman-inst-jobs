@@ -2,8 +2,8 @@ describe SwitchmanInstJobs::Delayed::Worker::HealthCheck do
   describe '.reschedule_abandoned_jobs' do
     it "just calls super if there's only one jobs shard" do
       expect(Delayed::Settings).to receive(:worker_health_check_type).and_return(:consul).twice
-      expect_any_instance_of(Delayed::Worker::ConsulHealthCheck)
-        .to receive(:live_workers).and_return([])
+      expect_any_instance_of(Delayed::Worker::ConsulHealthCheck).
+        to receive(:live_workers).and_return([])
       expect(Switchman::Shard).to receive(:with_each_shard).never
 
       expect(Delayed::Job).to receive(:running_jobs).once.and_return([])

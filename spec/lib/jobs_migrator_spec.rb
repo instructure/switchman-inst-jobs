@@ -51,8 +51,8 @@ describe SwitchmanInstJobs::JobsMigrator do
     Switchman::Shard.activate(primary: shard1, delayed_jobs: Switchman::Shard.default) do
       5.times { Kernel.delay(strand: 'strand1').sleep(0.1) }
     end
-    Delayed::Job.where(shard_id: shard1.id, strand: 'strand1').next_in_strand_order.first
-      .update(locked_by: 'specs', locked_at: DateTime.now)
+    Delayed::Job.where(shard_id: shard1.id, strand: 'strand1').next_in_strand_order.first.
+      update(locked_by: 'specs', locked_at: DateTime.now)
 
     expect(Delayed::Job.where(strand: 'strand1').count).to eq 5
     described_class.run

@@ -9,8 +9,8 @@ describe SwitchmanInstJobs::Engine do
     let(:args2) { ['worker_name2', worker_config2] }
 
     it 'activates the configured job shard1 to pop jobs' do
-      expect(Delayed::Job).to receive(:get_and_lock_next_available)
-        .once.with('worker_name1', 'test1', nil, nil) do
+      expect(Delayed::Job).to receive(:get_and_lock_next_available).
+        once.with('worker_name1', 'test1', nil, nil) do
         expect(Switchman::Shard.current(:delayed_jobs)).to eq shard1
         nil
       end
@@ -18,8 +18,8 @@ describe SwitchmanInstJobs::Engine do
     end
 
     it 'activates the configured job shard2 to pop jobs' do
-      expect(Delayed::Job).to receive(:get_and_lock_next_available)
-        .once.with('worker_name2', 'test2', nil, nil) do
+      expect(Delayed::Job).to receive(:get_and_lock_next_available).
+        once.with('worker_name2', 'test2', nil, nil) do
         expect(Switchman::Shard.current(:delayed_jobs)).to eq shard2
         nil
       end

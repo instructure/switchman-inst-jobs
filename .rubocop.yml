@@ -9,6 +9,9 @@ Layout/LineLength:
   Exclude:
     - db/migrate/*.rb
 
+Layout/DotPosition:
+  EnforcedStyle: trailing
+
 Layout/MultilineMethodCallIndentation:
   EnforcedStyle: indented # Default: aligned
 
