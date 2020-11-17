@@ -17,7 +17,7 @@ module SwitchmanInstJobs
           # We purposely don't .compact to remove nils here, since if any
           # workers are on the default jobs shard we want to unlock against
           # that shard too.
-          shard_ids = @config[:workers].map { |c| c[:shard] }.uniq
+          shard_ids = @config[:workers].pluck(:shard).uniq
           shards = shard_ids.map { |shard_id| ::Delayed::Worker.shard(shard_id) }
         end
         ::Switchman::Shard.with_each_shard(shards, [:delayed_jobs]) do

@@ -30,7 +30,10 @@ describe SwitchmanInstJobs::JobsMigrator do
 
     # 5 + 6 + 7 + 4
     expect(Delayed::Job.count).to eq starting_count + 22
-    described_class.run
+    # Ensure that shard1 actually *changes* jobs shards
+    shard1.delayed_jobs_shard_id = Switchman::Shard.default.id
+    shard1.save!
+    described_class.migrate_shards({ shard1 => shard1 })
     # 4
     expect(Delayed::Job.count).to eq starting_count + 4
 

@@ -3,6 +3,7 @@ require: rubocop-rails
 AllCops:
   TargetRailsVersion: 5.2
   TargetRubyVersion: 2.5
+  NewCops: enable
 
 Layout/LineLength:
   Max: 120 # Default: 80
@@ -22,6 +23,12 @@ Metrics/AbcSize:
   Max: 45 # Default: 15
   Exclude:
     - db/migrate/*.rb
+
+Metrics/CyclomaticComplexity:
+  Max: 12 # default 7
+
+Metrics/PerceivedComplexity:
+  Max: 12 # default 8
 
 Metrics/BlockLength:
   Exclude:
@@ -43,6 +50,9 @@ Naming/FileName:
     - spec/gemfiles/*.gemfile
 
 Rails/SkipsModelValidations:
+  Enabled: false
+
+Rails/SquishedSQLHeredocs:
   Enabled: false
 
 Style/Documentation:

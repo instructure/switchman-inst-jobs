@@ -29,26 +29,41 @@ module SwitchmanInstJobs
 
       def migrate_shards(shard_map)
         source_shards = Set[]
+        target_shards = Hash.new([])
         shard_map.each do |(shard, target_shard)|
           shard = ::Switchman::Shard.find(shard) unless shard.is_a?(::Switchman::Shard)
           source_shards << shard.delayed_jobs_shard.id
-          # If target_shard is an int, it won't have an id, but we can just use it as is
-          shard.update(delayed_jobs_shard_id: target_shard.try(:id) || target_shard, block_stranded: true)
+          target_shard = target_shard.try(:id) || target_shard
+          target_shards[target_shard] += [shard.id]
         end
+
+        # Do the updates in batches and then just clear redis instead of clearing them one at a time
+        target_shards.each do |target_shard, shards|
+          ::Switchman::Shard.where(id: shards).update_all(delayed_jobs_shard_id: target_shard, block_stranded: true)
+        end
+        clear_shard_cache
 
         # Wait a little over the 60 second in-process shard cache clearing
         # threshold to ensure that all new stranded jobs are now being
         # enqueued with next_in_strand: false
-        Rails.logger.debug("Waiting for caches to clear (#{source_shard.id} -> #{target_shard.id})")
+        Rails.logger.debug('Waiting for caches to clear')
         sleep(65) unless @skip_cache_wait
 
-        # TODO: 4 has been picked completely out of a hat.  We should make it configurable or something
-        Parallel.each(source_shards, in_processes: 4) do |s|
-          # Ensure the child processes don't share connections with the parent
-          Delayed::Pool.on_fork.call
-          ActiveRecord::Base.clear_all_connections!
-          s.activate(:delayed_jobs) { run }
+        ::Switchman::Shard.clear_cache
+        # rubocop:disable Style/CombinableLoops
+        # We first migrate strands so that we can stop blocking strands before we migrate unstranded jobs
+        source_shards.each do |s|
+          ::Switchman::Shard.lookup(s).activate(:delayed_jobs) { migrate_strands }
         end
+
+        source_shards.each do |s|
+          ::Switchman::Shard.lookup(s).activate(:delayed_jobs) { migrate_everything }
+        end
+        # rubocop:enable Style/CombinableLoops
+      end
+
+      def clear_shard_cache
+        ::Switchman.cache.clear
       end
 
       # This method expects that all relevant shards already have block_stranded: true
@@ -71,7 +86,7 @@ module SwitchmanInstJobs
         #    those (= do nothing since it should already be true)
 
         source_shard = ::Switchman::Shard.current(:delayed_jobs)
-        strand_scope = ::Delayed::Job.shard(source_shard).where('strand IS NOT NULL')
+        strand_scope = ::Delayed::Job.shard(source_shard).where.not(strand: nil)
         shard_map = build_shard_map(strand_scope, source_shard)
         shard_map.each do |(target_shard, source_shard_ids)|
           shard_scope = strand_scope.where(shard_id: source_shard_ids)
@@ -92,7 +107,7 @@ module SwitchmanInstJobs
                 # We lock it to ensure that the jobs worker can't delete it until we are done moving the strand
                 # Since we only unlock it on the new jobs queue *after* deleting from the original
                 # the lock ensures the blocker always gets unlocked
-                first = this_strand_scope.where('locked_by IS NOT NULL').next_in_strand_order.lock.first
+                first = this_strand_scope.where.not(locked_by: nil).next_in_strand_order.lock.first
                 if first
                   first_job = ::Delayed::Job.create!(strand: strand, next_in_strand: false)
                   first_job.payload_object = ::Delayed::PerformableMethod.new(Kernel, :sleep, args: [0])
@@ -123,26 +138,37 @@ module SwitchmanInstJobs
               end
             end
 
-            ::Switchman::Shard.find(source_shard_ids).each do |shard|
-              shard.update(block_stranded: false)
+            updated = ::Switchman::Shard.where(id: source_shard_ids, block_stranded: true).
+              update_all(block_stranded: false)
+            # If this is being manually re-run for some reason to clean something up, don't wait for nothing to happen
+            unless updated.zero?
+              clear_shard_cache
+              # Wait a little over the 60 second in-process shard cache clearing
+              # threshold to ensure that all new stranded jobs are now being
+              # enqueued with next_in_strand: false
+              Rails.logger.debug("Waiting for caches to clear (#{source_shard.id} -> #{target_shard.id})")
+              # for spec usage only
+              sleep(65) unless @skip_cache_wait
             end
-            # Wait a little over the 60 second in-process shard cache clearing
-            # threshold to ensure that all new stranded jobs are now being
-            # enqueued with next_in_strand: false
-            Rails.logger.debug("Waiting for caches to clear (#{source_shard.id} -> #{target_shard.id})")
-            # for spec usage only
-            sleep(65) unless @skip_cache_wait
+            ::Switchman::Shard.clear_cache
             # At this time, let's unblock all the strands on the target shard that aren't being held by a blocker
             # but actually could have run and we just didn't know it because we didn't know if they had jobs
             # on the source shard
-            # rubocop:disable Layout/LineLength
-            strands_to_unblock = shard_scope.where.not(source: 'JobsMigrator::StrandBlocker').
-              distinct.
-              where("NOT EXISTS (SELECT 1 FROM #{::Delayed::Job.quoted_table_name} dj2 WHERE delayed_jobs.strand=dj2.strand AND next_in_strand)").
-              pluck(:strand)
-            # rubocop:enable Layout/LineLength
-            strands_to_unblock.each do |strand|
-              Delayed::Job.where(strand: strand).next_in_strand_order.first.update_attribute(:next_in_strand, true)
+            target_shard.activate(:delayed_jobs) do
+              loop do
+                # We only want to unlock stranded jobs where they don't belong to a blocked shard (if they *do* belong)
+                # to a blocked shard, they must be part of a concurrent jobs migration from a different source shard to
+                # this target shard, so we shouldn't unlock them yet.  We only ever unlock one job here to keep the
+                # logic cleaner; if the job is n-stranded, after the first one runs, the trigger will unlock larger
+                # batches
+                break if ::Delayed::Job.where(id: ::Delayed::Job.select('DISTINCT ON (strand) id').
+                  where.not(strand: nil).
+                  where.not(shard_id: ::Switchman::Shard.where(block_stranded: true).pluck(:id)).where(
+                    ::Delayed::Job.select(1).from("#{::Delayed::Job.quoted_table_name} dj2").
+                    where("dj2.next_in_strand = true OR dj2.source = 'JobsMigrator::StrandBlocker'").
+                    where('dj2.strand = delayed_jobs.strand').arel.exists.not
+                  ).order(:strand, :strand_order_override, :id)).limit(500).update_all(next_in_strand: true).zero?
+              end
             end
           end
         end
@@ -242,7 +268,7 @@ module SwitchmanInstJobs
 
         connection.execute "COPY #{::Delayed::Job.quoted_table_name} (#{quoted_keys}) FROM STDIN"
         records.map do |record|
-          connection.raw_connection.put_copy_data(keys.map { |k| quote_text(record[k]) }.join("\t") + "\n")
+          connection.raw_connection.put_copy_data("#{keys.map { |k| quote_text(record[k]) }.join("\t")}\n")
         end
         connection.clear_query_cache
         connection.raw_connection.put_copy_end

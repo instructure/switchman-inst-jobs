@@ -93,7 +93,7 @@ module SwitchmanInstJobs
           # likely a missing shard with a stale cache
           current_shard.send(:clear_cache)
           ::Switchman::Shard.clear_cache
-          raise ShardNotFoundError, shard_id unless ::Switchman::Shard.where(id: shard_id).exists?
+          raise ShardNotFoundError, shard_id unless ::Switchman::Shard.exists?(id: shard_id)
 
           raise
         end

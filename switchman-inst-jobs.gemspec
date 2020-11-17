@@ -30,8 +30,8 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rake', '~> 13'
   s.add_development_dependency 'rspec', '~> 3.6'
   s.add_development_dependency 'rspec-rails', '~> 3.6'
-  s.add_development_dependency 'rubocop', '~> 0.79.0'
-  s.add_development_dependency 'rubocop-rails', '~> 2.4.2'
+  s.add_development_dependency 'rubocop', '~> 1.3.1'
+  s.add_development_dependency 'rubocop-rails', '~> 2.8.1'
   s.add_development_dependency 'simplecov', '~> 0.18'
   s.add_development_dependency 'wwtd', '~> 1.4'
 end
