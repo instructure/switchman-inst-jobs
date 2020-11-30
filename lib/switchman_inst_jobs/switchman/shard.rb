@@ -14,7 +14,7 @@ module SwitchmanInstJobs
           shard = ::Switchman::Shard.lookup(delayed_jobs_shard_id)
           return shard if shard
         end
-        database_server&.delayed_jobs_shard(self)
+        @delayed_jobs_shard ||= database_server&.delayed_jobs_shard(self)
       end
 
       # Adapted from hold/unhold methods in base delayed jobs base
