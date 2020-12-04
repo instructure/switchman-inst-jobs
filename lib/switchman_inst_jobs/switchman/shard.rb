@@ -39,7 +39,14 @@ module SwitchmanInstJobs
 
       def unhold_jobs!
         self.jobs_held = false
-        save! if changed?
+        if changed?
+          save!
+          # Wait a little over the 60 second in-process shard cache clearing
+          # threshold to ensure that all new jobs are now being enqueued
+          # unlocked
+          Rails.logger.debug('Waiting for caches to clear')
+          sleep(65)
+        end
         delayed_jobs_shard.activate(:delayed_jobs) do
           ::Delayed::Job.where(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY, shard_id: id).
             in_batches(of: 10_000).
