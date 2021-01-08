@@ -39,7 +39,9 @@ module SwitchmanInstJobs
 
         # Do the updates in batches and then just clear redis instead of clearing them one at a time
         target_shards.each do |target_shard, shards|
-          ::Switchman::Shard.where(id: shards).update_all(delayed_jobs_shard_id: target_shard, block_stranded: true)
+          updates = { delayed_jobs_shard_id: target_shard, block_stranded: true }
+          updates[:updated_at] = Time.zone.now if ::Switchman::Shard.column_names.include?('updated_at')
+          ::Switchman::Shard.where(id: shards).update_all(updates)
         end
         clear_shard_cache
 
