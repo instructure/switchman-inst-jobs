@@ -125,7 +125,7 @@ module SwitchmanInstJobs
                     update_all(next_in_strand: false)
                 end
 
-                # 4) is taken care of here, by leaveing next_in_strand alone and
+                # 4) is taken care of here, by leaving next_in_strand alone and
                 # it should execute on the new shard
                 batch_move_jobs(
                   target_shard: target_shard,
