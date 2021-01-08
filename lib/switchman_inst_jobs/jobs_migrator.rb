@@ -45,12 +45,6 @@ module SwitchmanInstJobs
         end
         clear_shard_cache
 
-        # Wait a little over the 60 second in-process shard cache clearing
-        # threshold to ensure that all new stranded jobs are now being
-        # enqueued with next_in_strand: false
-        Rails.logger.debug('Waiting for caches to clear')
-        sleep(65) unless @skip_cache_wait
-
         ::Switchman::Shard.clear_cache
         # rubocop:disable Style/CombinableLoops
         # We first migrate strands so that we can stop blocking strands before we migrate unstranded jobs
@@ -61,11 +55,33 @@ module SwitchmanInstJobs
         source_shards.each do |s|
           ::Switchman::Shard.lookup(s).activate(:delayed_jobs) { migrate_everything }
         end
+        ensure_unblock_stranded_for(shard_map.map(&:first))
         # rubocop:enable Style/CombinableLoops
       end
 
-      def clear_shard_cache
+      # if :migrate_strands ran on any shards that fell into scenario 1, then
+      # block_stranded never got flipped, so do that now.
+      def ensure_unblock_stranded_for(shards)
+        shards = ::Switchman::Shard.where(id: shards, block_stranded: true).to_a
+        return unless shards.any?
+
+        ::Switchman::Shard.where(id: shards).update_all(block_stranded: false)
+        clear_shard_cache
+
+        # shards is an array of shard objects that is now stale cause block_stranded has been updated.
+        shards.map(&:delayed_jobs_shard).uniq.each do |dj_shard|
+          unblock_strands(dj_shard)
+        end
+      end
+
+      def clear_shard_cache(debug_message = nil)
         ::Switchman.cache.clear
+        Rails.logger.debug("Waiting for caches to clear #{debug_message}")
+        # Wait a little over the 60 second in-process shard cache clearing
+        # threshold to ensure that all new stranded jobs are now being
+        # enqueued with next_in_strand: false
+        # @skip_cache_wait is for spec usage only
+        sleep(65) unless @skip_cache_wait
       end
 
       # This method expects that all relevant shards already have block_stranded: true
@@ -143,35 +159,32 @@ module SwitchmanInstJobs
             updated = ::Switchman::Shard.where(id: source_shard_ids, block_stranded: true).
               update_all(block_stranded: false)
             # If this is being manually re-run for some reason to clean something up, don't wait for nothing to happen
-            unless updated.zero?
-              clear_shard_cache
-              # Wait a little over the 60 second in-process shard cache clearing
-              # threshold to ensure that all new stranded jobs are now being
-              # enqueued with next_in_strand: false
-              Rails.logger.debug("Waiting for caches to clear (#{source_shard.id} -> #{target_shard.id})")
-              # for spec usage only
-              sleep(65) unless @skip_cache_wait
-            end
+            clear_shard_cache("(#{source_shard.id} -> #{target_shard.id})") unless updated.zero?
+
             ::Switchman::Shard.clear_cache
             # At this time, let's unblock all the strands on the target shard that aren't being held by a blocker
             # but actually could have run and we just didn't know it because we didn't know if they had jobs
             # on the source shard
-            target_shard.activate(:delayed_jobs) do
-              loop do
-                # We only want to unlock stranded jobs where they don't belong to a blocked shard (if they *do* belong)
-                # to a blocked shard, they must be part of a concurrent jobs migration from a different source shard to
-                # this target shard, so we shouldn't unlock them yet.  We only ever unlock one job here to keep the
-                # logic cleaner; if the job is n-stranded, after the first one runs, the trigger will unlock larger
-                # batches
-                break if ::Delayed::Job.where(id: ::Delayed::Job.select('DISTINCT ON (strand) id').
-                  where.not(strand: nil).
-                  where.not(shard_id: ::Switchman::Shard.where(block_stranded: true).pluck(:id)).where(
-                    ::Delayed::Job.select(1).from("#{::Delayed::Job.quoted_table_name} dj2").
-                    where("dj2.next_in_strand = true OR dj2.source = 'JobsMigrator::StrandBlocker'").
-                    where('dj2.strand = delayed_jobs.strand').arel.exists.not
-                  ).order(:strand, :strand_order_override, :id)).limit(500).update_all(next_in_strand: true).zero?
-              end
-            end
+            unblock_strands(target_shard)
+          end
+        end
+      end
+
+      def unblock_strands(target_shard)
+        target_shard.activate(:delayed_jobs) do
+          loop do
+            # We only want to unlock stranded jobs where they don't belong to a blocked shard (if they *do* belong)
+            # to a blocked shard, they must be part of a concurrent jobs migration from a different source shard to
+            # this target shard, so we shouldn't unlock them yet.  We only ever unlock one job here to keep the
+            # logic cleaner; if the job is n-stranded, after the first one runs, the trigger will unlock larger
+            # batches
+            break if ::Delayed::Job.where(id: ::Delayed::Job.select('DISTINCT ON (strand) id').
+              where.not(strand: nil).
+              where.not(shard_id: ::Switchman::Shard.where(block_stranded: true).pluck(:id)).where(
+                ::Delayed::Job.select(1).from("#{::Delayed::Job.quoted_table_name} dj2").
+                where("dj2.next_in_strand = true OR dj2.source = 'JobsMigrator::StrandBlocker'").
+                where('dj2.strand = delayed_jobs.strand').arel.exists.not
+              ).order(:strand, :strand_order_override, :id)).limit(500).update_all(next_in_strand: true).zero?
           end
         end
       end

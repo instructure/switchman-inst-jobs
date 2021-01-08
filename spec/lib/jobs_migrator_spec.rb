@@ -50,6 +50,11 @@ describe SwitchmanInstJobs::JobsMigrator do
     end
   end
 
+  it 'should set block_stranded to false when migration is done even if no jobs moved' do
+    described_class.migrate_shards({ shard1 => shard1 })
+    expect(shard1.reload.block_stranded).to be_falsy
+  end
+
   it 'should create a blocker strand if a job is currently running' do
     Switchman::Shard.activate(primary: shard1, delayed_jobs: Switchman::Shard.default) do
       5.times { Kernel.delay(strand: 'strand1').sleep(0.1) }
