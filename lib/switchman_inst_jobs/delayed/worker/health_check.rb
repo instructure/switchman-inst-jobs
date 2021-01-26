@@ -18,21 +18,22 @@ module SwitchmanInstJobs
             ::Delayed::Settings.worker_health_check_config['service_name'] = original_service_name
           end
 
-          def reschedule_abandoned_jobs(call_super: false)
-            shards = ::Switchman::Shard.delayed_jobs_shards.to_a
-            call_super = shards.first if shards.length == 1
-            unless call_super == false
-              call_super.activate(:delayed_jobs) do
-                return munge_service_name(call_super) { super() }
+          def reschedule_abandoned_jobs
+            shard_ids = ::SwitchmanInstJobs::Delayed::Settings.configured_shard_ids
+            shards = shard_ids.map { |shard_id| ::Delayed::Worker.shard(shard_id) }
+            ::Switchman::Shard.with_each_shard(shards, [:delayed_jobs]) do
+              dj_shard = ::Switchman::Shard.current(:delayed_jobs)
+              dj_shard.activate do
+                munge_service_name(dj_shard) do
+                  # because this rescheduling process is running on every host, we need
+                  # to make sure that it's functioning for each shard the current
+                  # host is programmed to interact with, but ONLY for those shards.
+                  # reading the config lets us iterate over any shards this host should
+                  # work with and lets us pick the correct service name to identify which
+                  # hosts are currently alive and valid via the health checks
+                  super()
+                end
               end
-            end
-
-            ::Switchman::Shard.with_each_shard(shards, [:delayed_jobs], exception: :ignore) do
-              shard = ::Switchman::Shard.current(:delayed_jobs)
-              singleton = <<~SINGLETON
-                periodic: Delayed::Worker::HealthCheck.reschedule_abandoned_jobs:#{shard.id}
-              SINGLETON
-              delay(singleton: singleton).reschedule_abandoned_jobs(call_super: shard)
             end
           end
         end

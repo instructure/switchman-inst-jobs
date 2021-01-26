@@ -43,8 +43,7 @@ module SwitchmanInstJobs
           end
 
           def configured_shard_ids
-            (::Delayed::Settings.worker_config.try(:[], 'workers') || []).
-              map { |w| w['shard'] }.compact.uniq
+            ::SwitchmanInstJobs::Delayed::Settings.configured_shard_ids
           end
 
           def processes_locked_locally

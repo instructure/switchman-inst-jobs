@@ -4,6 +4,11 @@ If you are using the [Switchman](https://github.com/instructure/switchman) and
 [Instructure Jobs](https://github.com/instructure/inst-jobs) gems in your
 application, simply include this gem to make background jobs aware of sharding.
 
+Some high-level features this gem provides to make this work:
+
+* Awareness on the Switchman side (inside shards) that shards have associated DJ shards that need to be activated when trying to talk to the DJ tables (lib/switchman_inst_jobs/switchman)
+* Awareness on the DJ side that jobs run within a given shard context that can be loaded from the config
+   and need to activate the shards jobs live on before running (lib/switchman_inst_jobs/delayed)
 
 ## Requirements
 
@@ -65,7 +70,7 @@ docker-compose run --rm app
 ```
 
 This will install the gem in a docker image with all versions of Ruby installed,
-and install all gem dependencies in the Ruby 2.4 set of gems. It will also
+and install all gem dependencies in the Ruby 2.5 set of gems. It will also
 download and spin up a PostgreSQL container for use with specs. Finally, it will
 run [wwtd](https://github.com/grosser/wwtd), which runs all specs across all
 supported version of Ruby and Rails, bundling gems for each combination along
@@ -74,20 +79,25 @@ the way.
 The first build will take a long time, however, docker images and gems are
 cached, making additional runs significantly faster.
 
-Individual spec runs can be started like so:
-
-```bash
-docker-compose run --rm app /bin/bash -l -c \
-  "BUNDLE_GEMFILE=spec/gemfiles/rails-5.0.gemfile rvm-exec 2.4 bundle exec rspec"
-```
-
-If you'd like to mount your git checkout within the docker container running
-tests so changes are easier to test, use the override provided:
+To run individual specs in a development workflow, you're going to want
+to have your file system mounted into the container:
 
 ```bash
 cp docker-compose.override.example.yml docker-compose.override.yml
 ```
 
+Then you're going to want to have a console open so that you can do a fast-feedback
+loop while making changes:
+
+```bash
+docker-compose run --rm app /bin/bash -l -c
+# you're inside the container shell now
+rvm-exec 2.5 bundle install
+rvm-exec 2.5 bundle exec rspec
+rvm-exec 2.5 bundle exec rspec spec/lib/delayed/worker/health_check_spec.rb
+```
+
+Watch your tests fail, tweak things, run the spec again, etc.
 
 ## Making a new Release
 

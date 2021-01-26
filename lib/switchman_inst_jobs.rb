@@ -38,6 +38,7 @@ end
 
 require 'switchman_inst_jobs/active_record/connection_adapters/postgresql_adapter'
 require 'switchman_inst_jobs/active_record/migration'
+require 'switchman_inst_jobs/delayed/settings'
 require 'switchman_inst_jobs/delayed/backend/base'
 require 'switchman_inst_jobs/delayed/message_sending'
 require 'switchman_inst_jobs/delayed/pool'
