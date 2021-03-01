@@ -18,7 +18,7 @@ module SwitchmanInstJobs
             enqueue_options = options.merge(
               current_shard: current_shard
             )
-            enqueue_job = -> { ::GuardRail.activate(:master) { super(object, **enqueue_options) } }
+            enqueue_job = -> { ::GuardRail.activate(:primary) { super(object, **enqueue_options) } }
 
             # Another dj shard must be currently manually activated, so just use that
             # In general this will only happen in unusual circumstances like tests
