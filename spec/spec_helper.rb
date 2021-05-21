@@ -1,4 +1,4 @@
-if /^2\.5/ =~ RUBY_VERSION && /5\.2/ =~ ENV['BUNDLE_GEMFILE'] # Limit coverage to one build
+if /^2\.6/ =~ RUBY_VERSION && /6\.1/ =~ ENV['BUNDLE_GEMFILE'] # Limit coverage to one build
   require 'simplecov'
 
   SimpleCov.start do
@@ -18,6 +18,7 @@ require 'pry'
 
 require File.expand_path('dummy/config/environment', __dir__)
 require 'rspec/rails'
+require 'switchman/r_spec_helper'
 
 # No reason to add default sleep time to specs:
 Delayed::Settings.sleep_delay         = 0
@@ -43,12 +44,6 @@ RSpec.configure do |config|
   config.use_transactional_fixtures = true
 
   config.around(:each) do |example|
-    Switchman::Shard.clear_cache
-    unless Switchman::Shard.default(reload: true).is_a?(Switchman::Shard)
-      Switchman::Shard.reset_column_information
-      Switchman::Shard.create!(default: true)
-      Switchman::Shard.default(reload: true)
-    end
     if ::Switchman::Shard.instance_variable_defined?(:@jobs_scope_empty)
       ::Switchman::Shard.remove_instance_variable(:@jobs_scope_empty)
     end

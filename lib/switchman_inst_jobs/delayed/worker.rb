@@ -16,14 +16,14 @@ module SwitchmanInstJobs
       end
 
       def start
-        shard.activate(:delayed_jobs) { super }
+        shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) { super }
       end
 
       # Worker#run is usually only called from Worker#start, but if the worker
       # is called directly from the console, we want to make sure it still gets
       # the right shard activated.
       def run
-        shard.activate(:delayed_jobs) { super }
+        shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) { super }
       end
 
       def shard

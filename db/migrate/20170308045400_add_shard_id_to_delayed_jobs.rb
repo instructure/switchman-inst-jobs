@@ -2,7 +2,7 @@ class AddShardIdToDelayedJobs < ActiveRecord::Migration[4.2]
   disable_ddl_transaction!
 
   def connection
-    Delayed::Backend::ActiveRecord::Job.connection
+    Delayed::Backend::ActiveRecord::AbstractJob.connection
   end
 
   def up
@@ -11,19 +11,9 @@ class AddShardIdToDelayedJobs < ActiveRecord::Migration[4.2]
 
     add_column :failed_jobs, :shard_id, :integer, limit: 8
     add_index :failed_jobs, :shard_id, algorithm: :concurrently
-
-    add_column :switchman_shards, :delayed_jobs_shard_id, :integer, limit: 8
-    add_foreign_key(
-      :switchman_shards,
-      :switchman_shards,
-      column: :delayed_jobs_shard_id
-    )
   end
 
   def down
-    remove_foreign_key :switchman_shards, column: :delayed_jobs_shard_id
-    remove_column :switchman_shards, :delayed_jobs_shard_id
-
     remove_index :failed_jobs, :shard_id
     remove_column :failed_jobs, :shard_id
 

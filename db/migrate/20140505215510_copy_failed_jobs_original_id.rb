@@ -1,11 +1,11 @@
 class CopyFailedJobsOriginalId < ActiveRecord::Migration[4.2]
   def connection
-    Delayed::Backend::ActiveRecord::Job.connection
+    Delayed::Backend::ActiveRecord::AbstractJob.connection
   end
 
   def up
     # this is a smaller, less frequently accessed table, so we just update all at once
-    Delayed::Backend::ActiveRecord::Job::Failed.where('original_job_id is null').update_all('original_job_id = original_id')
+    Delayed::Backend::ActiveRecord::Job::Failed.where(original_job_id: nil).update_all('original_job_id = original_id')
   end
 
   def down; end

@@ -1,7 +1,9 @@
 describe SwitchmanInstJobs::Engine do
   context 'with multiple job shards' do
-    let(:shard1) { Switchman::Shard.create }
-    let(:shard2) { Switchman::Shard.create }
+    include Switchman::RSpecHelper
+
+    let(:shard1) { @shard1 }
+    let(:shard2) { @shard2 }
     let(:work_queue) { Delayed::WorkQueue::InProcess.new }
     let(:worker_config1) { { shard: shard1.id, queue: 'test1' } }
     let(:worker_config2) { { shard: shard2.id, queue: 'test2' } }
@@ -11,7 +13,7 @@ describe SwitchmanInstJobs::Engine do
     it 'activates the configured job shard1 to pop jobs' do
       expect(Delayed::Job).to receive(:get_and_lock_next_available).
         once.with('worker_name1', 'test1', nil, nil) do
-        expect(Switchman::Shard.current(:delayed_jobs)).to eq shard1
+        expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard1
         nil
       end
       work_queue.get_and_lock_next_available(*args1)
@@ -20,7 +22,7 @@ describe SwitchmanInstJobs::Engine do
     it 'activates the configured job shard2 to pop jobs' do
       expect(Delayed::Job).to receive(:get_and_lock_next_available).
         once.with('worker_name2', 'test2', nil, nil) do
-        expect(Switchman::Shard.current(:delayed_jobs)).to eq shard2
+        expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard2
         nil
       end
       work_queue.get_and_lock_next_available(*args2)

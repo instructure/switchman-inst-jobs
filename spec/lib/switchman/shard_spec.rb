@@ -1,6 +1,8 @@
 describe SwitchmanInstJobs::Switchman::Shard do
-  let(:shard) { ::Switchman::Shard.create }
-  let(:jobs_shard) { ::Switchman::Shard.create }
+  include Switchman::RSpecHelper
+
+  let(:shard) { @shard1 }
+  let(:jobs_shard) { @shard2 }
 
   describe '#clear_cache' do
     it 'triggers cache clear after transaction'
@@ -13,6 +15,7 @@ describe SwitchmanInstJobs::Switchman::Shard do
     end
 
     it 'returns the DB server delayed jobs shard' do
+      shard = Switchman::Shard.new
       shard.database_server = ::Switchman::DatabaseServer.new(
         'jobs1', delayed_jobs_shard: jobs_shard.id
       )
@@ -29,32 +32,10 @@ describe SwitchmanInstJobs::Switchman::Shard do
   end
 
   describe '.current' do
-    it 'returns active :delayed_jobs shard' do
-      expect(::Switchman::Shard).to receive(:active_shards).once.and_return(
-        delayed_jobs: jobs_shard
-      )
-
-      expect(::Switchman::Shard.current(:delayed_jobs)).to eq jobs_shard
-    end
-
     it 'return default shard delayed_jobs_shard' do
       expect(
-        ::Switchman::Shard.current(:delayed_jobs)
+        ::Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)
       ).to eq ::Switchman::Shard.default
-    end
-  end
-
-  describe '.create' do
-    it 'uses DatabaseServer to configure new shard' do
-      expect(::Switchman::DatabaseServer).
-        to receive(:server_for_new_shard).once.and_call_original
-      ::Switchman::Shard.create
-    end
-
-    it 'creates a new shard' do
-      expect do
-        ::Switchman::Shard.create
-      end.to change { ::Switchman::Shard.count }.by 1
     end
   end
 
@@ -66,7 +47,10 @@ describe SwitchmanInstJobs::Switchman::Shard do
     it 'returns a referenced shard' do
       shard1 = Switchman::Shard.create!
       shard2 = Switchman::Shard.create!
-      shard1.update_attribute(:delayed_jobs_shard_id, shard2.id)
+      shard1.update!(delayed_jobs_shard_id: shard2.id)
+      if ::Switchman::Shard.instance_variable_defined?(:@jobs_scope_empty)
+        ::Switchman::Shard.remove_instance_variable(:@jobs_scope_empty)
+      end
       expect(Switchman::Shard.delayed_jobs_shards).to eq [shard2].sort
     end
   end
@@ -77,5 +61,22 @@ describe SwitchmanInstJobs::Switchman::Shard do
     expect(Switchman::Shard).to receive(:lookup).with(shard.id.to_s).and_return(shard)
     job.instance_variable_set(:@payload_object, nil)
     job.payload_object
+  end
+
+  describe '#hold_jobs!' do
+    it 'locks existing jobs' do
+      job = Kernel.delay(ignore_transaction: true).sleep
+      ::Switchman::Shard.default.hold_jobs!(wait: true)
+      expect(job.reload.locked_by).to eq ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY
+    end
+  end
+
+  describe '#unhold_jobs!' do
+    it 'unholds existing jobs' do
+      job = Kernel.delay(ignore_transaction: true).sleep
+      job.hold!
+      ::Switchman::Shard.default.unhold_jobs!
+      expect(job.reload.locked_by).to be_nil
+    end
   end
 end

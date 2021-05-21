@@ -13,11 +13,7 @@ Dummy::Application.configure do
   config.eager_load = false
 
   # Configure static file server for tests with Cache-Control for performance.
-  if Rails.version >= '5'
-    config.public_file_server.enabled = false
-  else
-    config.serve_static_files = false
-  end
+  config.public_file_server.enabled = false
 
   # Show full error reports and disable caching.
   config.consider_all_requests_local       = true

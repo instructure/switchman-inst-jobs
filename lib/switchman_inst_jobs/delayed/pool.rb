@@ -20,7 +20,7 @@ module SwitchmanInstJobs
           shard_ids = @config[:workers].pluck(:shard).uniq
           shards = shard_ids.map { |shard_id| ::Delayed::Worker.shard(shard_id) }
         end
-        ::Switchman::Shard.with_each_shard(shards, [:delayed_jobs]) do
+        ::Switchman::Shard.with_each_shard(shards, [::Delayed::Backend::ActiveRecord::AbstractJob]) do
           super
         end
       end

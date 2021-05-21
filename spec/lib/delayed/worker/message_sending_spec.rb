@@ -24,7 +24,9 @@ describe SwitchmanInstJobs::Delayed::MessageSending do
   end
 
   context 'sharded project' do
-    let(:project) { Project.create_sharded! }
+    include Switchman::RSpecHelper
+
+    let(:project) { @shard1.activate { Project.create! } }
 
     include_examples 'batch jobs sharding'
   end

@@ -1,6 +1,6 @@
 class SpeedUpMaxConcurrentDeleteTrigger < ActiveRecord::Migration[4.2]
   def connection
-    Delayed::Job.connection
+    Delayed::Backend::ActiveRecord::AbstractJob.connection
   end
 
   def up

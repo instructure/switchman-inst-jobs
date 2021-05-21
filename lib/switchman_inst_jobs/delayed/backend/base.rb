@@ -24,19 +24,18 @@ module SwitchmanInstJobs
             # In general this will only happen in unusual circumstances like tests
             # also if migrations are running, always use the current shard's job shard
             if ::ActiveRecord::Migration.open_migrations.zero? &&
-               current_shard.delayed_jobs_shard != ::Switchman::Shard.current(:delayed_jobs)
+               current_shard.delayed_jobs_shard !=
+               ::Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)
               enqueue_job.call
             else
-              ::Switchman::Shard.default.activate do
-                current_shard = ::Switchman::Shard.lookup(current_shard.id)
-              end
+              current_shard = ::Switchman::Shard.lookup(current_shard.id)
               current_job_shard = current_shard.delayed_jobs_shard
 
               if (options[:singleton] || options[:strand]) && current_shard.block_stranded
                 enqueue_options[:next_in_strand] = false
               end
 
-              current_job_shard.activate(:delayed_jobs) do
+              current_job_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
                 enqueue_job.call
               end
             end
@@ -50,7 +49,7 @@ module SwitchmanInstJobs
             shard_ids = configured_shard_ids
             if shard_ids.any?
               shards = shard_ids.map { |shard_id| ::Delayed::Worker.shard(shard_id) }
-              ::Switchman::Shard.with_each_shard(shards, [:delayed_jobs]) do
+              ::Switchman::Shard.with_each_shard(shards, [::Delayed::Backend::ActiveRecord::AbstractJob]) do
                 super
               end
             else
@@ -61,7 +60,9 @@ module SwitchmanInstJobs
 
         def self.prepended(base)
           base.singleton_class.prepend(ClassMethods)
-          base.shard_category = :delayed_jobs if base.name == 'Delayed::Backend::ActiveRecord::Job'
+          return unless base.name == 'Delayed::Backend::ActiveRecord::Job'
+
+          ::Delayed::Backend::ActiveRecord::AbstractJob.sharded_model
         end
 
         def current_shard
@@ -81,6 +82,8 @@ module SwitchmanInstJobs
         end
 
         def invoke_job
+          raise ShardNotFoundError, shard_id unless current_shard
+
           current_shard.activate { super }
         end
 
@@ -88,7 +91,7 @@ module SwitchmanInstJobs
           raise ShardNotFoundError, shard_id unless current_shard
 
           current_shard.activate { super }
-        rescue ::Switchman::ConnectionError, PG::ConnectionBad, PG::UndefinedTable
+        rescue PG::ConnectionBad, PG::UndefinedTable
           # likely a missing shard with a stale cache
           current_shard.send(:clear_cache)
           ::Switchman::Shard.clear_cache

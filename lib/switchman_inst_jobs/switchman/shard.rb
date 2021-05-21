@@ -22,12 +22,12 @@ module SwitchmanInstJobs
       def hold_jobs!(wait: false)
         self.jobs_held = true
         save! if changed?
-        delayed_jobs_shard.activate(:delayed_jobs) do
+        delayed_jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
           lock_jobs_for_hold
         end
         return unless wait
 
-        delayed_jobs_shard.activate(:delayed_jobs) do
+        delayed_jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
           while ::Delayed::Job.where(shard_id: id).
               where.not(locked_at: nil).
               where.not(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY).exists?
@@ -47,7 +47,7 @@ module SwitchmanInstJobs
           Rails.logger.debug('Waiting for caches to clear')
           sleep(65)
         end
-        delayed_jobs_shard.activate(:delayed_jobs) do
+        delayed_jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
           ::Delayed::Job.where(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY, shard_id: id).
             in_batches(of: 10_000).
             update_all(
@@ -75,22 +75,14 @@ module SwitchmanInstJobs
           remove_instance_variable(:@delayed_jobs_shards) if instance_variable_defined?(:@delayed_jobs_shards)
         end
 
-        def current(category = :primary)
-          if category == :delayed_jobs
-            active_shards[category] || super(:primary).delayed_jobs_shard
-          else
-            super
-          end
-        end
-
         def activate!(categories)
           if !@skip_delayed_job_auto_activation &&
-             !categories[:delayed_jobs] &&
-             categories[:primary] &&
-             categories[:primary] != active_shards[:primary]
+             !categories[::Delayed::Backend::ActiveRecord::AbstractJob] &&
+             categories[::ActiveRecord::Base] &&
+             categories[::ActiveRecord::Base] != ::Switchman::Shard.current(::ActiveRecord::Base)
             skip_delayed_job_auto_activation do
-              categories[:delayed_jobs] =
-                categories[:primary].delayed_jobs_shard
+              categories[::Delayed::Backend::ActiveRecord::AbstractJob] =
+                categories[::ActiveRecord::Base].delayed_jobs_shard
             end
           end
           super
@@ -102,11 +94,6 @@ module SwitchmanInstJobs
           yield
         ensure
           @skip_delayed_job_auto_activation = was
-        end
-
-        def create
-          db = ::Switchman::DatabaseServer.server_for_new_shard
-          db.create_new_shard
         end
 
         def periodic_clear_shard_cache

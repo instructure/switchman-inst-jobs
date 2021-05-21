@@ -1,6 +1,8 @@
 describe SwitchmanInstJobs::Delayed::Backend::Base do
-  let(:shard) { Switchman::Shard.create }
-  let(:project) { Project.create_sharded! }
+  include Switchman::RSpecHelper
+
+  let(:shard) { @shard1 }
+  let(:project) { @shard2.activate { Project.create! } }
   let(:harness_class) do
     Class.new(ApplicationRecord) do
       prepend SwitchmanInstJobs::Delayed::Backend::Base
@@ -73,7 +75,6 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
     end
 
     it 'does not lock the job if jobs are not held on the current shard' do
-      shard.unhold_jobs!
       job = nil
       shard.activate do
         job = 'string'.delay(ignore_transaction: true).size
@@ -83,14 +84,13 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
     end
 
     it 'locks the job if jobs are held on the current shard' do
-      shard.hold_jobs!
+      allow(shard).to receive(:jobs_held).and_return(true)
       job = nil
       shard.activate do
         job = 'string'.delay(ignore_transaction: true).size
       end
       expect(job.locked_by).to_not be_nil
       expect(job.locked_at).to_not be_nil
-      shard.unhold_jobs!
     end
   end
 
@@ -127,10 +127,6 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
     end
 
     it 'standardizes db failures' do
-      # if a shard no longer exists, trying to use it for this job will bomb
-      expect_any_instance_of(::Delayed::Backend::Base).
-        to receive(:deserialize).once.and_raise(PG::ConnectionBad)
-
       payload = ::Delayed::PerformableMethod.new(project, :id)
       job = ::Delayed::Job.create! payload_object: payload
       job.current_shard = project.shard

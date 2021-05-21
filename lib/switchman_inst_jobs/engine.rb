@@ -11,7 +11,9 @@ module SwitchmanInstJobs
 
       ::Delayed::Worker.lifecycle.around(:work_queue_pop) do |worker, config, &block|
         if config[:shard]
-          ::Switchman::Shard.lookup(config[:shard]).activate(:delayed_jobs) { block.call(worker, config) }
+          ::Switchman::Shard.lookup(config[:shard]).activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+            block.call(worker, config)
+          end
         else
           block.call(worker, config)
         end
@@ -23,8 +25,8 @@ module SwitchmanInstJobs
           ::Switchman::Shard.clear_cache
           ::Switchman::Shard.default.activate do
             current_job_shard = ::Switchman::Shard.lookup(job.shard_id).delayed_jobs_shard
-            if current_job_shard != ::Switchman::Shard.current(:delayed_jobs)
-              current_job_shard.activate(:delayed_jobs) do
+            if current_job_shard != ::Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)
+              current_job_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
                 j = ::Delayed::Job.where(strand: job.strand).next_in_strand_order.first
                 j.update_column(:next_in_strand, true) if j && !j.next_in_strand
               end
@@ -43,7 +45,7 @@ module SwitchmanInstJobs
     end
 
     config.after_initialize do
-      ::Switchman::Shard.default.delayed_jobs_shard.activate!(:delayed_jobs)
+      ::Switchman::Shard.default.delayed_jobs_shard.activate!(::Delayed::Backend::ActiveRecord::AbstractJob)
     end
   end
 end

@@ -17,10 +17,10 @@ module SwitchmanInstJobs
         return yield if shards.empty?
 
         shard = shards.pop
-        current_shard = ::Switchman::Shard.current(:delayed_jobs)
-        shard.activate(:delayed_jobs) do
+        current_shard = ::Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)
+        shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
           ::Delayed::Job.transaction do
-            current_shard.activate(:delayed_jobs) do
+            current_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
               transaction_on(shards, &block)
             end
           end
@@ -49,11 +49,11 @@ module SwitchmanInstJobs
         # rubocop:disable Style/CombinableLoops
         # We first migrate strands so that we can stop blocking strands before we migrate unstranded jobs
         source_shards.each do |s|
-          ::Switchman::Shard.lookup(s).activate(:delayed_jobs) { migrate_strands }
+          ::Switchman::Shard.lookup(s).activate(::Delayed::Backend::ActiveRecord::AbstractJob) { migrate_strands }
         end
 
         source_shards.each do |s|
-          ::Switchman::Shard.lookup(s).activate(:delayed_jobs) { migrate_everything }
+          ::Switchman::Shard.lookup(s).activate(::Delayed::Backend::ActiveRecord::AbstractJob) { migrate_everything }
         end
         ensure_unblock_stranded_for(shard_map.map(&:first))
         # rubocop:enable Style/CombinableLoops
@@ -103,7 +103,7 @@ module SwitchmanInstJobs
         # 4) no running job, jobs moved: set next_in_strand=true on the first of
         #    those (= do nothing since it should already be true)
 
-        source_shard = ::Switchman::Shard.current(:delayed_jobs)
+        source_shard = ::Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)
         strand_scope = ::Delayed::Job.shard(source_shard).where.not(strand: nil)
         shard_map = build_shard_map(strand_scope, source_shard)
         shard_map.each do |(target_shard, source_shard_ids)|
@@ -112,7 +112,7 @@ module SwitchmanInstJobs
           # 1) is taken care of because it should not show up here in strands
           strands = shard_scope.distinct.order(:strand).pluck(:strand)
 
-          target_shard.activate(:delayed_jobs) do
+          target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
             strands.each do |strand|
               transaction_on([source_shard, target_shard]) do
                 this_strand_scope = shard_scope.where(strand: strand)
@@ -171,7 +171,7 @@ module SwitchmanInstJobs
       end
 
       def unblock_strands(target_shard)
-        target_shard.activate(:delayed_jobs) do
+        target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
           loop do
             # We only want to unlock stranded jobs where they don't belong to a blocked shard (if they *do* belong)
             # to a blocked shard, they must be part of a concurrent jobs migration from a different source shard to
@@ -190,8 +190,8 @@ module SwitchmanInstJobs
       end
 
       def migrate_everything
-        source_shard = ::Switchman::Shard.current(:delayed_jobs)
-        scope = ::Delayed::Job.shard(source_shard).where('strand IS NULL')
+        source_shard = ::Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)
+        scope = ::Delayed::Job.shard(source_shard).where(strand: nil)
 
         shard_map = build_shard_map(scope, source_shard)
         shard_map.each do |(target_shard, source_shard_ids)|
@@ -224,7 +224,7 @@ module SwitchmanInstJobs
           # Adapted from get_and_lock_next_available in delayed/backend/active_record.rb
           target_jobs = scope.limit(1000).lock('FOR UPDATE SKIP LOCKED')
 
-          query = source_shard.activate(:delayed_jobs) do
+          query = source_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
             "WITH limited_jobs AS (#{target_jobs.to_sql}) " \
             "UPDATE #{::Delayed::Job.quoted_table_name} " \
             "SET locked_by = #{::Delayed::Job.connection.quote(::Delayed::Backend::Base::ON_HOLD_LOCKED_BY)}, " \
@@ -233,7 +233,9 @@ module SwitchmanInstJobs
             "RETURNING #{::Delayed::Job.quoted_table_name}.*"
           end
 
-          jobs = source_shard.activate(:delayed_jobs) { ::Delayed::Job.find_by_sql(query) }
+          jobs = source_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+            ::Delayed::Job.find_by_sql(query)
+          end
           new_jobs = jobs.map do |job|
             new_job = job.dup
             new_job.shard = target_shard
@@ -251,10 +253,10 @@ module SwitchmanInstJobs
             new_job
           end
           transaction_on([source_shard, target_shard]) do
-            target_shard.activate(:delayed_jobs) do
+            target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
               bulk_insert_jobs(new_jobs)
             end
-            source_shard.activate(:delayed_jobs) do
+            source_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
               ::Delayed::Job.delete(jobs)
             end
           end

@@ -1,8 +1,8 @@
 class AddJobsRunAtIndex < ActiveRecord::Migration[4.2]
-  disable_ddl_transaction! if respond_to?(:disable_ddl_transaction!)
+  disable_ddl_transaction!
 
   def connection
-    Delayed::Backend::ActiveRecord::Job.connection
+    Delayed::Backend::ActiveRecord::AbstractJob.connection
   end
 
   def up

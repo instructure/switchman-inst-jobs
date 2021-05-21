@@ -1,6 +1,6 @@
 class CreateDelayedJobs < ActiveRecord::Migration[4.2]
   def connection
-    Delayed::Backend::ActiveRecord::Job.connection
+    Delayed::Backend::ActiveRecord::AbstractJob.connection
   end
 
   def up

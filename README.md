@@ -52,7 +52,7 @@ inst-jobs setting you may want to configure in your application though:
 
 ```ruby
 Delayed::Settings.worker_procname_prefix = lambda do
-  "#{Switchman::Shard.current(:delayed_jobs).id}~"
+  "#{Switchman::Shard.current(Delayed::Job).id}~"
 end
 ```
 
@@ -70,7 +70,7 @@ docker-compose run --rm app
 ```
 
 This will install the gem in a docker image with all versions of Ruby installed,
-and install all gem dependencies in the Ruby 2.5 set of gems. It will also
+and install all gem dependencies in the Ruby 2.6 set of gems. It will also
 download and spin up a PostgreSQL container for use with specs. Finally, it will
 run [wwtd](https://github.com/grosser/wwtd), which runs all specs across all
 supported version of Ruby and Rails, bundling gems for each combination along
@@ -92,9 +92,9 @@ loop while making changes:
 ```bash
 docker-compose run --rm app /bin/bash -l -c
 # you're inside the container shell now
-rvm-exec 2.5 bundle install
-rvm-exec 2.5 bundle exec rspec
-rvm-exec 2.5 bundle exec rspec spec/lib/delayed/worker/health_check_spec.rb
+rvm-exec 2.6 bundle install
+rvm-exec 2.6 bundle exec rspec
+rvm-exec 2.6 bundle exec rspec spec/lib/delayed/worker/health_check_spec.rb
 ```
 
 Watch your tests fail, tweak things, run the spec again, etc.
