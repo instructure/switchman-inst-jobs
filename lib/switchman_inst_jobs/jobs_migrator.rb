@@ -76,7 +76,7 @@ module SwitchmanInstJobs
 
       def clear_shard_cache(debug_message = nil)
         ::Switchman.cache.clear
-        Rails.logger.debug("Waiting for caches to clear #{debug_message}")
+        Rails.logger.debug { "Waiting for caches to clear #{debug_message}" }
         # Wait a little over the 60 second in-process shard cache clearing
         # threshold to ensure that all new stranded jobs are now being
         # enqueued with next_in_strand: false
@@ -225,12 +225,14 @@ module SwitchmanInstJobs
           target_jobs = scope.limit(1000).lock('FOR UPDATE SKIP LOCKED')
 
           query = source_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
-            "WITH limited_jobs AS (#{target_jobs.to_sql}) " \
-            "UPDATE #{::Delayed::Job.quoted_table_name} " \
-            "SET locked_by = #{::Delayed::Job.connection.quote(::Delayed::Backend::Base::ON_HOLD_LOCKED_BY)}, " \
-            "locked_at = #{::Delayed::Job.connection.quote(::Delayed::Job.db_time_now)} "\
-            "FROM limited_jobs WHERE limited_jobs.id=#{::Delayed::Job.quoted_table_name}.id " \
-            "RETURNING #{::Delayed::Job.quoted_table_name}.*"
+            <<~SQL
+              WITH limited_jobs AS (#{target_jobs.to_sql})
+              UPDATE #{::Delayed::Job.quoted_table_name}
+              SET locked_by = #{::Delayed::Job.connection.quote(::Delayed::Backend::Base::ON_HOLD_LOCKED_BY)},
+              locked_at = #{::Delayed::Job.connection.quote(::Delayed::Job.db_time_now)}
+              FROM limited_jobs WHERE limited_jobs.id=#{::Delayed::Job.quoted_table_name}.id
+              RETURNING #{::Delayed::Job.quoted_table_name}.*
+            SQL
           end
 
           jobs = source_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
