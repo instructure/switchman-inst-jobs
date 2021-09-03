@@ -17,10 +17,6 @@ module SwitchmanInstJobs
     ::Delayed::Backend::ActiveRecord::Job.prepend(
       Delayed::Backend::Base
     )
-    ::Delayed::Backend::Redis::Job.prepend(
-      Delayed::Backend::Base
-    )
-    ::Delayed::Backend::Redis::Job.column :shard_id, :integer
     ::Delayed::Pool.prepend Delayed::Pool
     ::Delayed::Worker.prepend Delayed::Worker
     ::Delayed::Worker::HealthCheck.prepend Delayed::Worker::HealthCheck

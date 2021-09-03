@@ -19,30 +19,8 @@ Layout/MultilineMethodCallIndentation:
 Layout/ParameterAlignment:
   EnforcedStyle: with_fixed_indentation # Default: with_first_parameter
 
-Metrics/AbcSize:
-  Max: 45 # Default: 15
-  Exclude:
-    - db/migrate/*.rb
-
-Metrics/CyclomaticComplexity:
-  Max: 12 # default 7
-
-Metrics/PerceivedComplexity:
-  Max: 12 # default 8
-
-Metrics/BlockLength:
-  Exclude:
-    - '*.gemspec'
-    - spec/**/*.rb
-
-Metrics/MethodLength:
-  Max: 25 # Default: 10
-  Exclude:
-    - '**/migrate/*.rb'
-
-Metrics/ClassLength:
-  Exclude:
-    - '**/migrate/*.rb'
+Metrics:
+  Enabled: false
 
 Naming/FileName:
   Exclude:

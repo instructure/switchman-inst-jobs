@@ -1,7 +1,3 @@
-# Just disabling all the rubocop metrics for this file for now,
-# as it is a direct port-in of existing code
-
-# rubocop:disable Metrics/BlockLength, Metrics/MethodLength, Metrics/AbcSize, Metrics/ClassLength
 require 'set'
 require 'parallel'
 
@@ -314,5 +310,3 @@ module SwitchmanInstJobs
     end
   end
 end
-
-# rubocop:enable Metrics/BlockLength, Metrics/MethodLength, Metrics/AbcSize, Metrics/ClassLength
