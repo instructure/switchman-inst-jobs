@@ -281,7 +281,10 @@ module SwitchmanInstJobs
         connection = ::Delayed::Job.connection
         quoted_keys = keys.map { |k| connection.quote_column_name(k) }.join(', ')
 
-        connection.execute "COPY #{::Delayed::Job.quoted_table_name} (#{quoted_keys}) FROM STDIN"
+        connection.execute 'DROP TABLE IF EXISTS delayed_jobs_bulk_copy'
+        connection.execute "CREATE TEMPORARY TABLE delayed_jobs_bulk_copy
+          (LIKE #{::Delayed::Job.quoted_table_name} INCLUDING DEFAULTS)"
+        connection.execute "COPY delayed_jobs_bulk_copy (#{quoted_keys}) FROM STDIN"
         records.map do |record|
           connection.raw_connection.put_copy_data("#{keys.map { |k| quote_text(record[k]) }.join("\t")}\n")
         end
@@ -293,6 +296,9 @@ module SwitchmanInstJobs
         rescue StandardError => e
           raise connection.send(:translate_exception, e, 'COPY FROM STDIN')
         end
+        connection.execute "INSERT INTO #{::Delayed::Job.quoted_table_name} (#{quoted_keys})
+          SELECT #{quoted_keys} FROM delayed_jobs_bulk_copy
+          ON CONFLICT (singleton) WHERE singleton IS NOT NULL AND locked_by IS NULL DO NOTHING"
         result.cmd_tuples
       end
 

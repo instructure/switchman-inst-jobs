@@ -83,6 +83,29 @@ describe SwitchmanInstJobs::JobsMigrator do
     end
   end
 
+  it 'should handle pre-existing (or migrated earlier in the run) singleton jobs gracefully' do
+    Switchman::Shard.activate(::ActiveRecord::Base => shard1,
+                              ::Delayed::Backend::ActiveRecord::AbstractJob => Switchman::Shard.default) do
+      Kernel.delay(singleton: 'singleton1').sleep(0.1)
+    end
+    shard1.activate do
+      Kernel.delay(singleton: 'singleton1').sleep(0.1)
+    end
+
+    expect(Delayed::Job.where(singleton: 'singleton1').count).to eq 1
+    shard1.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+      expect(Delayed::Job.where(singleton: 'singleton1').count).to eq 1
+    end
+    described_class.run
+    # The singleton was dropped from this shard
+    expect(Delayed::Job.where(singleton: 'singleton1').count).to eq 0
+
+    # There is still one singleton on the new shard
+    shard1.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+      expect(Delayed::Job.where(singleton: 'singleton1').count).to eq 1
+    end
+  end
+
   context 'before_move_callbacks' do
     it 'Should pass the original job record to a callback' do
       @old_job = nil
