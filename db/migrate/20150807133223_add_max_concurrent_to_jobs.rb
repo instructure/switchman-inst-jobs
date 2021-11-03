@@ -1,8 +1,4 @@
 class AddMaxConcurrentToJobs < ActiveRecord::Migration[4.2]
-  def connection
-    Delayed::Backend::ActiveRecord::AbstractJob.connection
-  end
-
   def up
     add_column :delayed_jobs, :max_concurrent, :integer, default: 1, null: false
 

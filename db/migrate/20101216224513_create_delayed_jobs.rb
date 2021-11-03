@@ -1,8 +1,4 @@
 class CreateDelayedJobs < ActiveRecord::Migration[4.2]
-  def connection
-    Delayed::Backend::ActiveRecord::AbstractJob.connection
-  end
-
   def up
     unless connection.adapter_name == 'PostgreSQL'
       raise("#{connection.adapter_name} is not supported for delayed jobs queue")

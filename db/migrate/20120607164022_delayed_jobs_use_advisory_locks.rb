@@ -1,8 +1,4 @@
 class DelayedJobsUseAdvisoryLocks < ActiveRecord::Migration[4.2]
-  def connection
-    Delayed::Backend::ActiveRecord::AbstractJob.connection
-  end
-
   def up
     # use an advisory lock based on the name of the strand, instead of locking the whole table
     # note that we're using half of the md5, so collisions are possible, but we don't really

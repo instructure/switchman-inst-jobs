@@ -5,9 +5,6 @@ module SwitchmanInstJobs
   cattr_accessor :delayed_jobs_shard_fallback
 
   def self.initialize_active_record
-    ::ActiveRecord::ConnectionAdapters::ConnectionPool.prepend(
-      ActiveRecord::ConnectionAdapters::ConnectionPool
-    )
     ::ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.prepend(
       ActiveRecord::ConnectionAdapters::PostgreSQLAdapter
     )
@@ -16,6 +13,9 @@ module SwitchmanInstJobs
   def self.initialize_inst_jobs
     ::Delayed::Backend::ActiveRecord::Job.prepend(
       Delayed::Backend::Base
+    )
+    ::Delayed::Backend::ActiveRecord::AbstractJob.prepend(
+      Delayed::Backend::ActiveRecord::AbstractJob
     )
     ::Delayed::Pool.prepend Delayed::Pool
     ::Delayed::Worker.prepend Delayed::Worker
@@ -35,10 +35,10 @@ module SwitchmanInstJobs
   end
 end
 
-require 'switchman_inst_jobs/active_record/connection_adapters/connection_pool'
 require 'switchman_inst_jobs/active_record/connection_adapters/postgresql_adapter'
 require 'switchman_inst_jobs/active_record/migration'
 require 'switchman_inst_jobs/delayed/settings'
+require 'switchman_inst_jobs/delayed/backend/active_record/abstract_job'
 require 'switchman_inst_jobs/delayed/backend/base'
 require 'switchman_inst_jobs/delayed/message_sending'
 require 'switchman_inst_jobs/delayed/pool'

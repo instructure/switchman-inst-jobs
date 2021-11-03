@@ -1,10 +1,6 @@
 class AddJobsRunAtIndex < ActiveRecord::Migration[4.2]
   disable_ddl_transaction!
 
-  def connection
-    Delayed::Backend::ActiveRecord::AbstractJob.connection
-  end
-
   def up
     add_index :delayed_jobs, %w[run_at tag], algorithm: :concurrently
   end

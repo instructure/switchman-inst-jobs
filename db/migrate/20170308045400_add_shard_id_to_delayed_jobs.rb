@@ -1,10 +1,6 @@
 class AddShardIdToDelayedJobs < ActiveRecord::Migration[4.2]
   disable_ddl_transaction!
 
-  def connection
-    Delayed::Backend::ActiveRecord::AbstractJob.connection
-  end
-
   def up
     add_column :delayed_jobs, :shard_id, :integer, limit: 8
     add_index :delayed_jobs, :shard_id, algorithm: :concurrently

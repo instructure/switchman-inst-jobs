@@ -1,8 +1,4 @@
 class OptimizeDelayedJobs < ActiveRecord::Migration[4.2]
-  def connection
-    Delayed::Backend::ActiveRecord::AbstractJob.connection
-  end
-
   def up
     create_table :failed_jobs do |t|
       t.integer  'priority',    default: 0
@@ -27,11 +23,6 @@ class OptimizeDelayedJobs < ActiveRecord::Migration[4.2]
 
     add_index :delayed_jobs, %w[run_at queue locked_at strand priority], name: 'index_delayed_jobs_for_get_next'
     add_index :delayed_jobs, %w[strand id], name: 'index_delayed_jobs_on_strand'
-
-    # move all failed jobs to the new failed table
-    Delayed::Backend::ActiveRecord::Job.where.not(failed_at: nil).find_each do |job|
-      job.fail! unless job.on_hold?
-    end
   end
 
   def down

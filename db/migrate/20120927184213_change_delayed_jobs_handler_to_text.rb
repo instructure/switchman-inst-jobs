@@ -1,8 +1,4 @@
 class ChangeDelayedJobsHandlerToText < ActiveRecord::Migration[4.2]
-  def connection
-    Delayed::Backend::ActiveRecord::AbstractJob.connection
-  end
-
   def up
     change_column :delayed_jobs, :handler, :text
   end

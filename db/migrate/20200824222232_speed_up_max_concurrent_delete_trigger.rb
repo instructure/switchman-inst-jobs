@@ -1,8 +1,4 @@
 class SpeedUpMaxConcurrentDeleteTrigger < ActiveRecord::Migration[4.2]
-  def connection
-    Delayed::Backend::ActiveRecord::AbstractJob.connection
-  end
-
   def up
     if connection.adapter_name == 'PostgreSQL'
       # tl;dr sacrifice some responsiveness to max_concurrent changes for faster performance
