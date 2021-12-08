@@ -3,6 +3,7 @@ FROM instructure/rvm
 WORKDIR /app
 
 USER root
+RUN apt-get update && apt-get install -y git
 RUN chown -R docker:docker /app
 USER docker
 

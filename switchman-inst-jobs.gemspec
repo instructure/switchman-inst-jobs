@@ -14,6 +14,11 @@ Gem::Specification.new do |s|
 
   s.files    = Dir['{db,lib}/**/*']
 
+  s.metadata = {
+    'allowed_push_host' => 'https://rubygems.org',
+    'rubygems_mfa_required' => 'true'
+  }
+
   s.required_ruby_version = '>= 2.6'
 
   s.add_dependency 'inst-jobs', '>= 2.4.9', '< 4.0'
