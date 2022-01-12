@@ -89,7 +89,7 @@ module SwitchmanInstJobs
         migrate_everything
       end
 
-      def migrate_strands
+      def migrate_strands(batch_size: 1_000)
         # there are 4 scenarios to deal with here
         # 1) no running job, no jobs moved: do nothing
         # 2) running job, no jobs moved; create blocker with next_in_strand=false
@@ -144,7 +144,8 @@ module SwitchmanInstJobs
                 batch_move_jobs(
                   target_shard: target_shard,
                   source_shard: source_shard,
-                  scope: jobs_scope
+                  scope: jobs_scope,
+                  batch_size: batch_size
                 ) do |job, new_job|
                   # This ensures jobs enqueued on the old jobs shard run before jobs on the new jobs queue
                   new_job.strand_order_override = job.strand_order_override - 1
@@ -166,7 +167,7 @@ module SwitchmanInstJobs
         end
       end
 
-      def unblock_strands(target_shard)
+      def unblock_strands(target_shard, batch_size: 10_000)
         target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
           loop do
             # We only want to unlock stranded jobs where they don't belong to a blocked shard (if they *do* belong)
@@ -180,12 +181,12 @@ module SwitchmanInstJobs
                 ::Delayed::Job.select(1).from("#{::Delayed::Job.quoted_table_name} dj2").
                 where("dj2.next_in_strand = true OR dj2.source = 'JobsMigrator::StrandBlocker'").
                 where('dj2.strand = delayed_jobs.strand').arel.exists.not
-              ).order(:strand, :strand_order_override, :id)).limit(500).update_all(next_in_strand: true).zero?
+              ).order(:strand, :strand_order_override, :id)).limit(batch_size).update_all(next_in_strand: true).zero?
           end
         end
       end
 
-      def migrate_everything
+      def migrate_everything(batch_size: 1_000)
         source_shard = ::Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)
         scope = ::Delayed::Job.shard(source_shard).where(strand: nil)
 
@@ -194,7 +195,8 @@ module SwitchmanInstJobs
           batch_move_jobs(
             target_shard: target_shard,
             source_shard: source_shard,
-            scope: scope.where(shard_id: source_shard_ids).where(locked_by: nil)
+            scope: scope.where(shard_id: source_shard_ids).where(locked_by: nil),
+            batch_size: batch_size
           )
         end
       end
@@ -215,10 +217,10 @@ module SwitchmanInstJobs
         shard_map
       end
 
-      def batch_move_jobs(target_shard:, source_shard:, scope:)
+      def batch_move_jobs(target_shard:, source_shard:, scope:, batch_size:)
         while scope.exists?
           # Adapted from get_and_lock_next_available in delayed/backend/active_record.rb
-          target_jobs = scope.limit(1000).lock('FOR UPDATE SKIP LOCKED')
+          target_jobs = scope.limit(batch_size).lock('FOR UPDATE SKIP LOCKED')
 
           query = source_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
             <<~SQL
