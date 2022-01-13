@@ -14,9 +14,6 @@ describe SwitchmanInstJobs::JobsMigrator do
   end
 
   it "should move strand'd jobs, and not non-strand'd jobs" do
-    # bad other specs for leaving stuff in here
-    starting_count = Delayed::Job.count
-
     Switchman::Shard.activate(::ActiveRecord::Base => shard1,
                               ::Delayed::Backend::ActiveRecord::AbstractJob => Switchman::Shard.default) do
       expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq Switchman::Shard.default
@@ -32,13 +29,13 @@ describe SwitchmanInstJobs::JobsMigrator do
     end
 
     # 5 + 6 + 7 + 4
-    expect(Delayed::Job.count).to eq starting_count + 22
+    expect(Delayed::Job.count).to eq 22
     # Ensure that shard1 actually *changes* jobs shards
     shard1.delayed_jobs_shard_id = Switchman::Shard.default.id
     shard1.save!
     described_class.migrate_shards({ shard1 => shard1 })
     # 4
-    expect(Delayed::Job.count).to eq starting_count + 4
+    expect(Delayed::Job.count).to eq 4
 
     shard1.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
       # 5 + 6 + 3 + 7
