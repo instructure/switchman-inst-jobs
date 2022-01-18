@@ -123,16 +123,7 @@ module SwitchmanInstJobs
                 # the lock ensures the blocker always gets unlocked
                 first = this_strand_scope.where.not(locked_by: nil).next_in_strand_order.lock.first
                 if first
-                  first_job = ::Delayed::Job.create!(strand: strand, next_in_strand: false)
-                  first_job.payload_object = ::Delayed::PerformableMethod.new(Kernel, :sleep, args: [0])
-                  first_job.queue = first.queue
-                  first_job.tag = 'Kernel.sleep'
-                  first_job.source = 'JobsMigrator::StrandBlocker'
-                  first_job.max_attempts = 1
-                  # If we ever have jobs left over from 9999 jobs moves of a single shard,
-                  # something has gone terribly wrong
-                  first_job.strand_order_override = -9999
-                  first_job.save!
+                  create_blocker_job(queue: first.queue, strand: strand)
                   # the rest of 3) is taken care of here
                   # make sure that all the jobs moved over are NOT next in strand
                   ::Delayed::Job.where(next_in_strand: true, strand: strand, locked_by: nil).
@@ -202,6 +193,18 @@ module SwitchmanInstJobs
       end
 
       private
+
+      def create_blocker_job(**kwargs)
+        first_job = ::Delayed::Job.create!(**kwargs, next_in_strand: false)
+        first_job.payload_object = ::Delayed::PerformableMethod.new(Kernel, :sleep, args: [0])
+        first_job.tag = 'Kernel.sleep'
+        first_job.source = 'JobsMigrator::StrandBlocker'
+        first_job.max_attempts = 1
+        # If we ever have jobs left over from 9999 jobs moves of a single shard,
+        # something has gone terribly wrong
+        first_job.strand_order_override = -9999
+        first_job.save!
+      end
 
       def build_shard_map(scope, source_shard)
         shard_ids = scope.distinct.pluck(:shard_id)
