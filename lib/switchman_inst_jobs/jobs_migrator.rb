@@ -159,20 +159,29 @@ module SwitchmanInstJobs
       end
 
       def unblock_strands(target_shard, batch_size: 10_000)
-        target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
-          loop do
-            # We only want to unlock stranded jobs where they don't belong to a blocked shard (if they *do* belong)
-            # to a blocked shard, they must be part of a concurrent jobs migration from a different source shard to
-            # this target shard, so we shouldn't unlock them yet.  We only ever unlock one job here to keep the
-            # logic cleaner; if the job is n-stranded, after the first one runs, the trigger will unlock larger
-            # batches
-            break if ::Delayed::Job.where(id: ::Delayed::Job.select('DISTINCT ON (strand) id').
-              where.not(strand: nil).
-              where.not(shard_id: ::Switchman::Shard.where(block_stranded: true).pluck(:id)).where(
+        block_stranded_ids = ::Switchman::Shard.where(block_stranded: true).pluck(:id)
+        query = lambda { |column, scope|
+          ::Delayed::Job.
+            where(id: ::Delayed::Job.select("DISTINCT ON (#{column}) id").
+              where(scope).
+              where.not(shard_id: block_stranded_ids).
+              where(
                 ::Delayed::Job.select(1).from("#{::Delayed::Job.quoted_table_name} dj2").
                 where("dj2.next_in_strand = true OR dj2.source = 'JobsMigrator::StrandBlocker'").
-                where('dj2.strand = delayed_jobs.strand').arel.exists.not
-              ).order(:strand, :strand_order_override, :id)).limit(batch_size).update_all(next_in_strand: true).zero?
+                where("dj2.#{column} = delayed_jobs.#{column}").arel.exists.not
+              ).
+              order(column, :strand_order_override, :id)).limit(batch_size)
+        }
+
+        target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+          # We only want to unlock stranded jobs where they don't belong to a blocked shard (if they *do* belong)
+          # to a blocked shard, they must be part of a concurrent jobs migration from a different source shard to
+          # this target shard, so we shouldn't unlock them yet.  We only ever unlock one job here to keep the
+          # logic cleaner; if the job is n-stranded, after the first one runs, the trigger will unlock larger
+          # batches
+
+          loop do
+            break if query.call(:strand, 'strand IS NOT NULL').update_all(next_in_strand: true).zero?
           end
         end
       end
