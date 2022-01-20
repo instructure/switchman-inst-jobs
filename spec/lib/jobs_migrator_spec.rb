@@ -28,6 +28,87 @@ describe SwitchmanInstJobs::JobsMigrator do
     shard1.save!
   end
 
+  context 'unblock_strands' do
+    it 'should unblock stranded jobs when block_stranded becomes false' do
+      shard1.update!(block_stranded: true)
+      activate_target_shard do
+        2.times { Kernel.delay(strand: 'strand1').sleep(0.1) }
+        2.times { Kernel.delay(strand: 'strand2').sleep(0.2) }
+
+        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 4
+      end
+
+      described_class.unblock_strands(shard1)
+      activate_target_shard do
+        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 4
+      end
+
+      shard1.update!(block_stranded: false)
+      described_class.unblock_strands(shard1)
+      activate_target_shard do
+        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 2
+      end
+    end
+
+    it 'should unblock the strand with the highest priority' do
+      shard1.update!(block_stranded: true)
+      activate_target_shard do
+        Kernel.delay(strand: 'strand1', strand_order_override: -100).sleep(0.1)
+        Kernel.delay(strand: 'strand1', strand_order_override: 100).sleep(0.1)
+        Kernel.delay(strand: 'strand2', strand_order_override: 100).sleep(0.2)
+        Kernel.delay(strand: 'strand2', strand_order_override: -100).sleep(0.2)
+
+        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 4
+      end
+
+      shard1.update!(block_stranded: false)
+      described_class.unblock_strands(shard1, batch_size: 1)
+      activate_target_shard do
+        expect(Delayed::Job.where(strand_order_override: -100, next_in_strand: 't').count).to eq 2
+        expect(Delayed::Job.where(strand_order_override: 100, next_in_strand: 'f').count).to eq 2
+      end
+    end
+
+    it 'should not unblock stranded jobs when a strand blocker job exists' do
+      shard1.update!(block_stranded: true)
+      activate_target_shard do
+        Kernel.delay(strand: 'strand1').sleep(0.1)
+        Kernel.delay(strand: 'strand2').sleep(0.2)
+        Kernel.delay(strand: 'strand1', source: 'JobsMigrator::StrandBlocker').sleep(0.1)
+
+        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 3
+      end
+
+      shard1.update!(block_stranded: false)
+      described_class.unblock_strands(shard1)
+      activate_target_shard do
+        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 2
+      end
+    end
+
+    it 'should not unblock stranded jobs when a job within that strand already has next_in_strand=true' do
+      shard1.update!(block_stranded: true)
+      activate_target_shard do
+        Kernel.delay(strand: 'strand1').sleep(0.1)
+        Kernel.delay(strand: 'strand1').sleep(0.1)
+        Kernel.delay(strand: 'strand2').sleep(0.2)
+
+        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 3
+      end
+
+      shard1.update!(block_stranded: false)
+
+      activate_target_shard do
+        Delayed::Job.where(strand: 'strand1').first.update!(next_in_strand: true)
+      end
+
+      described_class.unblock_strands(shard1)
+      activate_target_shard do
+        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 1
+      end
+    end
+  end
+
   it "should move strand'd jobs, and not non-strand'd jobs" do
     activate_source_shard do
       5.times { Kernel.delay(strand: 'strand1').sleep(0.1) }

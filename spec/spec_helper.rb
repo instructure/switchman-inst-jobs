@@ -49,4 +49,10 @@ RSpec.configure do |config|
     end
     example.run
   end
+
+  config.around(:each, use_transactional_fixtures: false) do |example|
+    self.use_transactional_tests = false
+    example.run
+    self.use_transactional_tests = true
+  end
 end
