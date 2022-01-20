@@ -183,6 +183,11 @@ module SwitchmanInstJobs
           loop do
             break if query.call(:strand, 'strand IS NOT NULL').update_all(next_in_strand: true).zero?
           end
+
+          loop do
+            break if query.call(:singleton,
+                                'strand IS NULL AND singleton IS NOT NULL').update_all(next_in_strand: true).zero?
+          end
         end
       end
 
