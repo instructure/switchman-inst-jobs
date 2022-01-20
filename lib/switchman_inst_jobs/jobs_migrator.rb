@@ -90,6 +90,8 @@ module SwitchmanInstJobs
       end
 
       def migrate_strands(batch_size: 1_000)
+        source_shard = ::Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)
+
         # there are 4 scenarios to deal with here
         # 1) no running job, no jobs moved: do nothing
         # 2) running job, no jobs moved; create blocker with next_in_strand=false
@@ -98,52 +100,60 @@ module SwitchmanInstJobs
         #    those (= do nothing since it should already be false)
         # 4) no running job, jobs moved: set next_in_strand=true on the first of
         #    those (= do nothing since it should already be true)
+        handler = lambda { |scope, column|
+          shard_map = build_shard_map(scope, source_shard)
+          shard_map.each do |(target_shard, source_shard_ids)|
+            shard_scope = scope.where(shard_id: source_shard_ids)
 
-        source_shard = ::Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)
-        strand_scope = ::Delayed::Job.shard(source_shard).where.not(strand: nil)
-        shard_map = build_shard_map(strand_scope, source_shard)
-        shard_map.each do |(target_shard, source_shard_ids)|
-          shard_scope = strand_scope.where(shard_id: source_shard_ids)
+            # 1) is taken care of because it should not show up here in strands
+            values = shard_scope.distinct.order(column).pluck(column)
 
-          # 1) is taken care of because it should not show up here in strands
-          strands = shard_scope.distinct.order(:strand).pluck(:strand)
+            target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+              values.each do |value|
+                transaction_on([source_shard, target_shard]) do
+                  value_scope = shard_scope.where(**{ column => value })
+                  # we want to copy all the jobs except the one that is still running.
+                  jobs_scope = value_scope.where(locked_by: nil)
 
-          target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
-            strands.each do |strand|
-              transaction_on([source_shard, target_shard]) do
-                this_strand_scope = shard_scope.where(strand: strand)
-                # we want to copy all the jobs except the one that is still running.
-                jobs_scope = this_strand_scope.where(locked_by: nil)
+                  # 2) and part of 3) are taken care of here by creating a blocker
+                  # job with next_in_strand = false. as soon as the current
+                  # running job is finished it should set next_in_strand
+                  # We lock it to ensure that the jobs worker can't delete it until we are done moving the strand
+                  # Since we only unlock it on the new jobs queue *after* deleting from the original
+                  # the lock ensures the blocker always gets unlocked
+                  first = value_scope.where.not(locked_by: nil).next_in_strand_order.lock.first
+                  if first
+                    create_blocker_job(queue: first.queue, **{ column => value })
+                    # the rest of 3) is taken care of here
+                    # make sure that all the jobs moved over are NOT next in strand
+                    ::Delayed::Job.where(next_in_strand: true, locked_by: nil, **{ column => value }).
+                      update_all(next_in_strand: false)
+                  end
 
-                # 2) and part of 3) are taken care of here by creating a blocker
-                # job with next_in_strand = false. as soon as the current
-                # running job is finished it should set next_in_strand
-                # We lock it to ensure that the jobs worker can't delete it until we are done moving the strand
-                # Since we only unlock it on the new jobs queue *after* deleting from the original
-                # the lock ensures the blocker always gets unlocked
-                first = this_strand_scope.where.not(locked_by: nil).next_in_strand_order.lock.first
-                if first
-                  create_blocker_job(queue: first.queue, strand: strand)
-                  # the rest of 3) is taken care of here
-                  # make sure that all the jobs moved over are NOT next in strand
-                  ::Delayed::Job.where(next_in_strand: true, strand: strand, locked_by: nil).
-                    update_all(next_in_strand: false)
-                end
-
-                # 4) is taken care of here, by leaving next_in_strand alone and
-                # it should execute on the new shard
-                batch_move_jobs(
-                  target_shard: target_shard,
-                  source_shard: source_shard,
-                  scope: jobs_scope,
-                  batch_size: batch_size
-                ) do |job, new_job|
-                  # This ensures jobs enqueued on the old jobs shard run before jobs on the new jobs queue
-                  new_job.strand_order_override = job.strand_order_override - 1
+                  # 4) is taken care of here, by leaving next_in_strand alone and
+                  # it should execute on the new shard
+                  batch_move_jobs(
+                    target_shard: target_shard,
+                    source_shard: source_shard,
+                    scope: jobs_scope,
+                    batch_size: batch_size
+                  ) do |job, new_job|
+                    # This ensures jobs enqueued on the old jobs shard run before jobs on the new jobs queue
+                    new_job.strand_order_override = job.strand_order_override - 1
+                  end
                 end
               end
             end
+          end
+        }
 
+        strand_scope = ::Delayed::Job.shard(source_shard).where.not(strand: nil)
+
+        handler.call(strand_scope, :strand)
+
+        shard_map = build_shard_map(strand_scope, source_shard)
+        shard_map.each do |(target_shard, source_shard_ids)|
+          target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
             updated = ::Switchman::Shard.where(id: source_shard_ids, block_stranded: true).
               update_all(block_stranded: false)
             # If this is being manually re-run for some reason to clean something up, don't wait for nothing to happen
