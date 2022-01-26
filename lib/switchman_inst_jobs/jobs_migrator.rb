@@ -100,7 +100,7 @@ module SwitchmanInstJobs
         #    those (= do nothing since it should already be false)
         # 4) no running job, jobs moved: set next_in_strand=true on the first of
         #    those (= do nothing since it should already be true)
-        handler = lambda { |scope, column|
+        handler = lambda { |scope, column, blocker_job_kwargs = {}|
           shard_map = build_shard_map(scope, source_shard)
           shard_map.each do |(target_shard, source_shard_ids)|
             shard_scope = scope.where(shard_id: source_shard_ids)
@@ -123,7 +123,7 @@ module SwitchmanInstJobs
                   # the lock ensures the blocker always gets unlocked
                   first = value_scope.where.not(locked_by: nil).next_in_strand_order.lock.first
                   if first
-                    create_blocker_job(queue: first.queue, **{ column => value })
+                    create_blocker_job(queue: first.queue, **{ column => value }, **blocker_job_kwargs)
                     # the rest of 3) is taken care of here
                     # make sure that all the jobs moved over are NOT next in strand
                     ::Delayed::Job.where(next_in_strand: true, locked_by: nil, **{ column => value }).
@@ -148,10 +148,14 @@ module SwitchmanInstJobs
         }
 
         strand_scope = ::Delayed::Job.shard(source_shard).where.not(strand: nil)
+        singleton_scope = ::Delayed::Job.shard(source_shard).where('strand IS NULL AND singleton IS NOT NULL')
+        all_scope = ::Delayed::Job.shard(source_shard).where('strand IS NOT NULL OR singleton IS NOT NULL')
 
         handler.call(strand_scope, :strand)
+        handler.call(singleton_scope, :singleton,
+                     { locked_at: DateTime.now, locked_by: ::Delayed::Backend::Base::ON_HOLD_BLOCKER })
 
-        shard_map = build_shard_map(strand_scope, source_shard)
+        shard_map = build_shard_map(all_scope, source_shard)
         shard_map.each do |(target_shard, source_shard_ids)|
           target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
             updated = ::Switchman::Shard.where(id: source_shard_ids, block_stranded: true).

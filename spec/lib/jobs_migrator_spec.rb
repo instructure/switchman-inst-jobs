@@ -204,6 +204,49 @@ describe SwitchmanInstJobs::JobsMigrator do
     end
   end
 
+  it 'should move strandless singleton jobs' do
+    activate_source_shard do
+      Kernel.delay(singleton: 'singleton1').sleep(0.1)
+      Kernel.delay(singleton: 'singleton2').sleep(0.2)
+    end
+
+    shard1.delayed_jobs_shard_id = Switchman::Shard.default.id
+    shard1.save!
+
+    activate_target_shard do
+      expect(Delayed::Job.where.not(singleton: nil).count).to eq 0
+    end
+
+    described_class.migrate_shards({ shard1 => shard1 })
+
+    activate_target_shard do
+      expect(Delayed::Job.where.not(singleton: nil).count).to eq 2
+    end
+  end
+
+  it 'should not overwrite strandless singleton jobs on the target shard' do
+    activate_source_shard do
+      Kernel.delay(singleton: 'singleton1').sleep(0.1)
+    end
+
+    activate_target_shard do
+      Kernel.delay(singleton: 'singleton1').sleep(0.2)
+    end
+
+    shard1.delayed_jobs_shard_id = Switchman::Shard.default.id
+    shard1.save!
+
+    activate_target_shard do
+      expect(Delayed::Job.where.not(singleton: nil).first&.payload_object&.args).to eq [0.2]
+    end
+
+    described_class.migrate_shards({ shard1 => shard1 })
+
+    activate_target_shard do
+      expect(Delayed::Job.where.not(singleton: nil).first&.payload_object&.args).to eq [0.2]
+    end
+  end
+
   it 'should set block_stranded to false when migration is done even if no jobs moved' do
     described_class.migrate_shards({ shard1 => shard1 })
     expect(shard1.reload.block_stranded).to be_falsy
@@ -230,6 +273,30 @@ describe SwitchmanInstJobs::JobsMigrator do
       # when the current running job on other shard finishes it will set next_in_strand
       expect(first_job.next_in_strand).to be_falsy
       expect(strand.where(next_in_strand: true).count).to eq 0
+    end
+  end
+
+  it 'should create a blocker singleton if a strandless singleton is currently running' do
+    activate_source_shard do
+      Kernel.delay(locked_at: DateTime.now, locked_by: 'w1', singleton: 'singleton1').sleep(0.1)
+      Kernel.delay(singleton: 'singleton1').sleep(0.1)
+    end
+
+    expect(Delayed::Job.count).to eq 2
+    described_class.run
+    # the original running job
+    expect(Delayed::Job.count).to eq 1
+
+    activate_target_shard do
+      expect(
+        Delayed::Job.where('locked_at IS NOT NULL AND locked_by IS NOT NULL').where(singleton: 'singleton1').count
+      ).to eq 1
+      expect(
+        Delayed::Job.where('locked_at IS NULL AND locked_by IS NULL').where(singleton: 'singleton1').count
+      ).to eq 1
+
+      # the blocker job + previously queued job
+      expect(Delayed::Job.count).to eq 2
     end
   end
 
