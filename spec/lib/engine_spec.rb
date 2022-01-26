@@ -43,6 +43,78 @@ describe SwitchmanInstJobs::Engine do
         Switchman::Shard.current.save!
       end
 
+      it 'deletes the strand blocker for stranded jobs' do
+        shard1.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+          expect(Switchman::Shard.current).to eq Switchman::Shard.default
+          expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard1
+          Kernel.delay(strand: 'strand1', queue: 'test1').sleep(0.1)
+        end
+
+        shard2.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+          expect(Delayed::Job.count).to eq 0
+          expect(Switchman::Shard.current).to eq Switchman::Shard.default
+          expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard2
+
+          Kernel.delay(strand: 'strand1', queue: 'test1', locked_by: 'strand blocker', locked_at: DateTime.now,
+                       source: 'JobsMigrator::StrandBlocker').sleep(0.1)
+          Delayed::Job.first.update!(next_in_strand: false)
+
+          Kernel.delay(strand: 'strand1', queue: 'test1').sleep(0.1)
+          Delayed::Job.last.update!(next_in_strand: false)
+        end
+
+        Switchman::Shard.current.delayed_jobs_shard_id = shard2.id
+        Switchman::Shard.current.save!
+
+        shard2.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+          expect(Delayed::Job.first.source).to eq 'JobsMigrator::StrandBlocker'
+          expect(Delayed::Job.first.next_in_strand).to eq false
+        end
+
+        Delayed::Worker.new(queue: 'test1', worker_max_job_count: 1, shard: shard1.id).run
+
+        shard2.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+          expect(Delayed::Job.first.source).not_to eq 'JobsMigrator::StrandBlocker'
+          expect(Delayed::Job.first.next_in_strand).to eq true
+        end
+      end
+
+      it 'deletes the strand blocker for strandless singleton jobs' do
+        shard1.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+          expect(Switchman::Shard.current).to eq Switchman::Shard.default
+          expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard1
+          Kernel.delay(singleton: 'singleton1', queue: 'test1').sleep(0.1)
+        end
+
+        shard2.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+          expect(Delayed::Job.count).to eq 0
+          expect(Switchman::Shard.current).to eq Switchman::Shard.default
+          expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard2
+
+          Kernel.delay(singleton: 'singleton1', queue: 'test1', locked_by: 'singleton blocker', locked_at: DateTime.now,
+                       source: 'JobsMigrator::StrandBlocker').sleep(0.1)
+          Delayed::Job.first.update!(next_in_strand: false)
+
+          Kernel.delay(singleton: 'singleton1', queue: 'test1').sleep(0.1)
+          Delayed::Job.last.update!(next_in_strand: false)
+        end
+
+        Switchman::Shard.current.delayed_jobs_shard_id = shard2.id
+        Switchman::Shard.current.save!
+
+        shard2.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+          expect(Delayed::Job.first.source).to eq 'JobsMigrator::StrandBlocker'
+          expect(Delayed::Job.first.next_in_strand).to eq false
+        end
+
+        Delayed::Worker.new(queue: 'test1', worker_max_job_count: 1, shard: shard1.id).run
+
+        shard2.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+          expect(Delayed::Job.first.source).not_to eq 'JobsMigrator::StrandBlocker'
+          expect(Delayed::Job.first.next_in_strand).to eq true
+        end
+      end
+
       it 'unblocks stranded jobs on a new shard' do
         Switchman::Shard.current.delayed_jobs_shard_id = shard1.id
         Switchman::Shard.current.save!

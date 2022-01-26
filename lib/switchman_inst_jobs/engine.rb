@@ -29,6 +29,8 @@ module SwitchmanInstJobs
             current_job_shard = ::Switchman::Shard.lookup(job.shard_id).delayed_jobs_shard
             if current_job_shard != ::Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)
               current_job_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+                ::Delayed::Job.where(source: 'JobsMigrator::StrandBlocker', **{ column => job.try(column) }).delete_all
+
                 j = ::Delayed::Job.where(**{ column => job.try(column) }).next_in_strand_order.first
                 j.update_column(:next_in_strand, true) if j && !j.next_in_strand
               end
