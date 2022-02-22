@@ -100,7 +100,7 @@ module SwitchmanInstJobs
         #    those (= do nothing since it should already be false)
         # 4) no running job, jobs moved: set next_in_strand=true on the first of
         #    those (= do nothing since it should already be true)
-        handler = lambda { |scope, column, blocker_job_kwargs = {}|
+        handler = lambda { |scope, column, blocker_job_kwargs = {}, advisory_lock_cb = nil|
           shard_map = build_shard_map(scope, source_shard)
           shard_map.each do |(target_shard, source_shard_ids)|
             shard_scope = scope.where(shard_id: source_shard_ids)
@@ -111,6 +111,10 @@ module SwitchmanInstJobs
             target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
               values.each do |value|
                 transaction_on([source_shard, target_shard]) do
+                  source_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+                    advisory_lock_cb&.call(value)
+                  end
+
                   value_scope = shard_scope.where(**{ column => value })
                   # we want to copy all the jobs except the one that is still running.
                   jobs_scope = value_scope.where(locked_by: nil)
@@ -151,9 +155,21 @@ module SwitchmanInstJobs
         singleton_scope = ::Delayed::Job.shard(source_shard).where('strand IS NULL AND singleton IS NOT NULL')
         all_scope = ::Delayed::Job.shard(source_shard).where('strand IS NOT NULL OR singleton IS NOT NULL')
 
-        handler.call(strand_scope, :strand)
-        handler.call(singleton_scope, :singleton,
-                     { locked_at: DateTime.now, locked_by: ::Delayed::Backend::Base::ON_HOLD_BLOCKER })
+        singleton_blocker_additional_kwargs = {
+          locked_at: DateTime.now,
+          locked_by: ::Delayed::Backend::Base::ON_HOLD_BLOCKER
+        }
+
+        strand_advisory_lock_fn = lambda do |value|
+          ::Delayed::Job.connection.execute("SELECT pg_advisory_xact_lock(half_md5_as_bigint('#{value}'))")
+        end
+
+        singleton_advisory_lock_fn = lambda do |value|
+          ::Delayed::Job.connection.execute("SELECT pg_advisory_xact_lock(half_md5_as_bigint('singleton:#{value}'))")
+        end
+
+        handler.call(strand_scope, :strand, {}, strand_advisory_lock_fn)
+        handler.call(singleton_scope, :singleton, singleton_blocker_additional_kwargs, singleton_advisory_lock_fn)
 
         shard_map = build_shard_map(all_scope, source_shard)
         shard_map.each do |(target_shard, source_shard_ids)|
