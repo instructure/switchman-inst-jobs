@@ -127,7 +127,13 @@ module SwitchmanInstJobs
                   # the lock ensures the blocker always gets unlocked
                   first = value_scope.where.not(locked_by: nil).next_in_strand_order.lock.first
                   if first
-                    create_blocker_job(queue: first.queue, **{ column => value }, **blocker_job_kwargs)
+                    create_blocker_job(
+                      queue: first.queue,
+                      shard_id: first.shard_id,
+                      **{ column => value },
+                      **blocker_job_kwargs
+                    )
+
                     # the rest of 3) is taken care of here
                     # make sure that all the jobs moved over are NOT next in strand
                     ::Delayed::Job.where(next_in_strand: true, locked_by: nil, **{ column => value }).
@@ -160,12 +166,15 @@ module SwitchmanInstJobs
           locked_by: ::Delayed::Backend::Base::ON_HOLD_BLOCKER
         }
 
+        quoted_function_name = ::Delayed::Job.connection.quote_table_name('half_md5_as_bigint')
         strand_advisory_lock_fn = lambda do |value|
-          ::Delayed::Job.connection.execute("SELECT pg_advisory_xact_lock(half_md5_as_bigint('#{value}'))")
+          ::Delayed::Job.connection.execute("SELECT pg_advisory_xact_lock(#{quoted_function_name}('#{value}'))")
         end
 
         singleton_advisory_lock_fn = lambda do |value|
-          ::Delayed::Job.connection.execute("SELECT pg_advisory_xact_lock(half_md5_as_bigint('singleton:#{value}'))")
+          ::Delayed::Job.connection.execute(
+            "SELECT pg_advisory_xact_lock(#{quoted_function_name}('singleton:#{value}'))"
+          )
         end
 
         handler.call(strand_scope, :strand, {}, strand_advisory_lock_fn)
