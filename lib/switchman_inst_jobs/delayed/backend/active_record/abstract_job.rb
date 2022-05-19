@@ -6,7 +6,9 @@ module SwitchmanInstJobs
           module ClassMethods
             def current_switchman_shard
               connected_to_stack.reverse_each do |hash|
-                return hash[:switchman_shard] if hash[:switchman_shard] && hash[:klasses].include?(connection_classes)
+                if hash[:switchman_shard] && hash[:klasses].include?(connection_class_for_self)
+                  return hash[:switchman_shard]
+                end
               end
 
               ::ActiveRecord::Base.current_switchman_shard.delayed_jobs_shard

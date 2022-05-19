@@ -23,8 +23,8 @@ Gem::Specification.new do |s|
 
   s.add_dependency 'inst-jobs', '>= 2.4.9', '< 4.0'
   s.add_dependency 'parallel', '>= 1.19'
-  s.add_dependency 'railties', '>= 6.1', '< 6.2'
-  s.add_dependency 'switchman', '~> 3.0', '>= 3.0.7'
+  s.add_dependency 'railties', '>= 6.1', '< 7.1'
+  s.add_dependency 'switchman', '~> 3.1'
 
   s.add_development_dependency 'appraisal', '~> 2.3.0'
   s.add_development_dependency 'bundler'

@@ -1,6 +1,6 @@
 test:
   adapter: postgresql
-  database: test<%= ENV['TEST_ENV_NUMBER'] %>
+  database: switchman_inst_jobs_test<%= ENV['TEST_ENV_NUMBER'] %>
   pool: 1
   timeout: 5000
   username: <%= ENV.fetch('DB_USERNAME', '') %>

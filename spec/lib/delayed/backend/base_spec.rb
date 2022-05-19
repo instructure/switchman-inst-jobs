@@ -11,6 +11,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
 
       define_singleton_method(:columns) { [] }
       define_singleton_method(:columns_hash) { {} }
+      define_singleton_method(:table_exists?) { false }
       define_singleton_method(:load_schema!) do
         # Do nothing for specs
       end

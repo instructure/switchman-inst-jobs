@@ -19,7 +19,7 @@ pipeline {
           }
           axis {
             name 'RAILS_VERSION'
-            values '6.1'
+            values '6.1', '7.0'
           }
         }
         stages {
