@@ -2,8 +2,12 @@ require: rubocop-rails
 
 AllCops:
   TargetRailsVersion: 6.1
-  TargetRubyVersion: 2.6
+  TargetRubyVersion: 2.7
   NewCops: enable
+  Exclude:
+    - 'bin/*'
+    - 'gemfiles/*'
+
 
 Layout/LineLength:
   Max: 120 # Default: 80

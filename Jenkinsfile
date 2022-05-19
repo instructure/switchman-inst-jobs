@@ -1,48 +1,52 @@
 #!/usr/bin/env groovy
 
 pipeline {
-    agent {
-        label 'docker'
-    }
-    environment {
-        COMPOSE_FILE = 'docker-compose.yml'
-    }
-    options {
-        ansiColor('xterm')
-        buildDiscarder(logRotator(numToKeepStr: '50'))
-        timeout(time: 20, unit: 'MINUTES')
-    }
-    stages {
-        stage('Build') {
-            steps {
-                sh 'docker-compose pull postgres'
-                sh 'docker-compose up -d postgres'
-                sh 'docker-compose build --pull app'
-            }
-        }
-        stage('Test') {
-            steps {
-                sh '''
-                    docker-compose run --rm app /bin/bash -l -c \
-                        "rvm-exec 2.6 bundle exec rubocop --fail-level autocorrect"
-                    docker-compose run --name coverage app
-                '''
-            }
-            post {
-                always {
-                    sh 'docker cp coverage:/app/coverage .'
-                    sh 'docker-compose down --rmi=all --volumes --remove-orphans'
+    agent { label 'docker' }
 
-                    publishHTML target: [
-                      allowMissing: false,
-                      alwaysLinkToLastBuild: false,
-                      keepAll: true,
-                      reportDir: 'coverage',
-                      reportFiles: 'index.html',
-                      reportName: 'Coverage Report'
-                    ]
-                }
-            }
+  environment {
+    // Make sure we're ignoring any override files that may be present
+    COMPOSE_FILE = "docker-compose.yml"
+  }
+
+  stages {
+    stage('Test') {
+      matrix {
+        agent { label 'docker' }
+        axes {
+          axis {
+            name 'RUBY_VERSION'
+            values '2.7', '3.0'
+          }
+          axis {
+            name 'RAILS_VERSION'
+            values '6.1'
+          }
         }
+        stages {
+          stage('Build') {
+            steps {
+              // Allow postgres to initialize while the build runs
+              sh 'docker-compose up -d postgres'
+              sh "docker-compose build --pull --build-arg RUBY_VERSION=${RUBY_VERSION} --build-arg BUNDLE_GEMFILE=gemfiles/activerecord_${RAILS_VERSION}.gemfile app"
+              sh 'docker-compose run --rm app bundle exec rake db:drop db:create db:migrate'
+              sh 'docker-compose run --rm app bundle exec rake'
+            }
+          }
+        }
+      }
     }
+
+    stage('Lint') {
+      steps {
+        sh "docker-compose build --pull"
+        sh "docker-compose run --rm app bin/rubocop"
+      }
+    }
+  }
+
+  post {
+    cleanup {
+      sh 'docker-compose down --remove-orphans --rmi all'
+    }
+  }
 }

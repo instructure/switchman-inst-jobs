@@ -12,8 +12,8 @@ Some high-level features this gem provides to make this work:
 
 ## Requirements
 
-* Ruby 2.3+
-* Rails 4.2+
+* Ruby 2.7+
+* Rails 6.1+
 
 
 ## Installation
@@ -70,11 +70,8 @@ docker-compose run --rm app
 ```
 
 This will install the gem in a docker image with all versions of Ruby installed,
-and install all gem dependencies in the Ruby 2.6 set of gems. It will also
-download and spin up a PostgreSQL container for use with specs. Finally, it will
-run [wwtd](https://github.com/grosser/wwtd), which runs all specs across all
-supported version of Ruby and Rails, bundling gems for each combination along
-the way.
+and install all gem dependencies in the Ruby 2.7 set of gems. It will also
+download and spin up a PostgreSQL container for use with specs.
 
 The first build will take a long time, however, docker images and gems are
 cached, making additional runs significantly faster.
@@ -92,9 +89,9 @@ loop while making changes:
 ```bash
 docker-compose run --rm app /bin/bash -l -c
 # you're inside the container shell now
-rvm-exec 2.6 bundle install
-rvm-exec 2.6 bundle exec rspec
-rvm-exec 2.6 bundle exec rspec spec/lib/delayed/worker/health_check_spec.rb
+bundle install
+bundle exec rspec
+bundle exec rspec spec/lib/delayed/worker/health_check_spec.rb
 ```
 
 Watch your tests fail, tweak things, run the spec again, etc.
