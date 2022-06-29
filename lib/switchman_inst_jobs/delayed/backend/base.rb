@@ -14,7 +14,7 @@ module SwitchmanInstJobs
         module ClassMethods
           def enqueue(object, **options)
             ::Switchman::Shard.periodic_clear_shard_cache
-            current_shard = ::Switchman::Shard.current
+            current_shard = options[:current_shard] || ::Switchman::Shard.current
             enqueue_options = options.merge(
               current_shard: current_shard
             )
