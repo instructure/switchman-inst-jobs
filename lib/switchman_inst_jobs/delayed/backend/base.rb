@@ -35,8 +35,10 @@ module SwitchmanInstJobs
                 enqueue_options[:next_in_strand] = false
               end
 
-              current_job_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
-                enqueue_job.call
+              current_shard.activate do
+                current_job_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+                  enqueue_job.call
+                end
               end
             end
           end
