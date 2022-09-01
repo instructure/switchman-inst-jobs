@@ -39,7 +39,7 @@ module SwitchmanInstJobs
           updates[:updated_at] = Time.zone.now if ::Switchman::Shard.column_names.include?('updated_at')
           ::Switchman::Shard.where(id: shards).update_all(updates)
         end
-        clear_shard_cache
+        clear_shard_cache(default: ::Switchman::Shard.exists?(id: target_shards.values.flatten, default: true))
 
         ::Switchman::Shard.clear_cache
         # rubocop:disable Style/CombinableLoops
@@ -62,7 +62,7 @@ module SwitchmanInstJobs
         return unless shards.any?
 
         ::Switchman::Shard.where(id: shards).update_all(block_stranded: false)
-        clear_shard_cache
+        clear_shard_cache(default: shards.any?(&:default?))
 
         # shards is an array of shard objects that is now stale cause block_stranded has been updated.
         shards.map(&:delayed_jobs_shard).uniq.each do |dj_shard|
@@ -70,8 +70,9 @@ module SwitchmanInstJobs
         end
       end
 
-      def clear_shard_cache(debug_message = nil)
-        ::Switchman.cache.clear
+      def clear_shard_cache(debug_message = nil, default:)
+        ::Switchman.cache.delete_matched('shard/*')
+        ::Switchman.cache.delete('default_shard') if default
         Rails.logger.debug { "Waiting for caches to clear #{debug_message}" }
         # Wait a little over the 60 second in-process shard cache clearing
         # threshold to ensure that all new stranded jobs are now being
@@ -186,7 +187,11 @@ module SwitchmanInstJobs
             updated = ::Switchman::Shard.where(id: source_shard_ids, block_stranded: true).
               update_all(block_stranded: false)
             # If this is being manually re-run for some reason to clean something up, don't wait for nothing to happen
-            clear_shard_cache("(#{source_shard.id} -> #{target_shard.id})") unless updated.zero?
+            unless updated.zero?
+              clear_shard_cache("(#{source_shard.id} -> #{target_shard.id})",
+                                default: ::Switchman::Shard.exists?(id: source_shard_ids,
+                                                                    default: true))
+            end
 
             ::Switchman::Shard.clear_cache
             # At this time, let's unblock all the strands on the target shard that aren't being held by a blocker
