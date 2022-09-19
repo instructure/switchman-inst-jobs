@@ -9,6 +9,16 @@ module SwitchmanInstJobs
         @before_move_callbacks << proc
       end
 
+      def add_validation_callback(proc)
+        @validation_callbacks ||= []
+        @validation_callbacks << proc
+      end
+
+      def clear_callbacks!
+        @before_move_callbacks = []
+        @validation_callbacks = []
+      end
+
       def transaction_on(shards, &block)
         return yield if shards.empty?
 
@@ -31,6 +41,10 @@ module SwitchmanInstJobs
           source_shards << shard.delayed_jobs_shard.id
           target_shard = target_shard.try(:id) || target_shard
           target_shards[target_shard] += [shard.id]
+
+          @validation_callbacks&.each do |proc|
+            proc.call(shard: shard, target_shard: ::Switchman::Shard.find(target_shard))
+          end
         end
 
         # Do the updates in batches and then just clear redis instead of clearing them one at a time

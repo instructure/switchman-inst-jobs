@@ -333,6 +333,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       end
       described_class.run
       expect(@old_job.shard).to eq(Switchman::Shard.default)
+      described_class.clear_callbacks!
     end
 
     it 'Should pass the new job record to a callback' do
@@ -345,6 +346,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       end
       described_class.run
       expect(@new_job.shard).to eq(shard1)
+      described_class.clear_callbacks!
     end
 
     it 'Should call before the new job record is saved' do
@@ -357,6 +359,30 @@ describe SwitchmanInstJobs::JobsMigrator do
       end
       described_class.run
       expect(@new_job.new_record?).to be true
+    end
+  end
+
+  context 'validation_callbacks' do
+    it 'Should abort moving if validation fails' do
+      # rubocop:todo Lint/UnusedBlockArgument
+      described_class.add_validation_callback(->(shard:, target_shard:) { raise 'bad move' })
+      # rubocop:enable Lint/UnusedBlockArgument
+      activate_source_shard do
+        Kernel.delay(strand: 'strand', ignore_transaction: true).sleep(0)
+      end
+      expect { described_class.migrate_shards({ shard1 => shard1 }) }.to raise_error('bad move')
+      described_class.clear_callbacks!
+    end
+
+    it 'Should succeed moving if validation succeeds' do
+      # rubocop:todo Lint/UnusedBlockArgument
+      described_class.add_validation_callback(->(shard:, target_shard:) { 'noop' })
+      # rubocop:enable Lint/UnusedBlockArgument
+      activate_source_shard do
+        Kernel.delay(strand: 'strand', ignore_transaction: true).sleep(0)
+      end
+      expect { described_class.migrate_shards({ shard1 => shard1 }) }.not_to raise_error
+      described_class.clear_callbacks!
     end
   end
 end
