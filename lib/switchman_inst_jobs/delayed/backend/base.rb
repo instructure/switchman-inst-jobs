@@ -8,6 +8,9 @@ module SwitchmanInstJobs
     end
   end
 
+  class JobsBlockedError < RuntimeError
+  end
+
   module Delayed
     module Backend
       module Base

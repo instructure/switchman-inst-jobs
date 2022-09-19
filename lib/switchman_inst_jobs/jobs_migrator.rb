@@ -95,6 +95,17 @@ module SwitchmanInstJobs
         sleep(65) unless @skip_cache_wait
       end
 
+      def acquire_advisory_lock(type, name)
+        @quoted_function_name ||= ::Delayed::Job.connection.quote_table_name('half_md5_as_bigint')
+
+        value = type == :singleton ? "singleton:#{name}" : name
+        ::Delayed::Job.connection.execute(
+          ::Delayed::Job.sanitize_sql_for_conditions(
+            ["SELECT pg_advisory_xact_lock(#{@quoted_function_name}(?))", value]
+          )
+        )
+      end
+
       # This method expects that all relevant shards already have block_stranded: true
       # but otherwise jobs can be running normally
       def run
@@ -181,15 +192,12 @@ module SwitchmanInstJobs
           locked_by: ::Delayed::Backend::Base::ON_HOLD_BLOCKER
         }
 
-        quoted_function_name = ::Delayed::Job.connection.quote_table_name('half_md5_as_bigint')
         strand_advisory_lock_fn = lambda do |value|
-          ::Delayed::Job.connection.execute("SELECT pg_advisory_xact_lock(#{quoted_function_name}('#{value}'))")
+          acquire_advisory_lock(:strand, value)
         end
 
         singleton_advisory_lock_fn = lambda do |value|
-          ::Delayed::Job.connection.execute(
-            "SELECT pg_advisory_xact_lock(#{quoted_function_name}('singleton:#{value}'))"
-          )
+          acquire_advisory_lock(:singleton, value)
         end
 
         handler.call(strand_scope, :strand, {}, strand_advisory_lock_fn)
@@ -217,12 +225,12 @@ module SwitchmanInstJobs
       end
 
       def unblock_strands(target_shard, batch_size: 10_000)
-        block_stranded_ids = ::Switchman::Shard.where(block_stranded: true).pluck(:id)
+        blocked_shard_ids = blocked_shards.pluck(:id)
         query = lambda { |column, scope|
           ::Delayed::Job.
             where(id: ::Delayed::Job.select("DISTINCT ON (#{column}) id").
               where(scope).
-              where.not(shard_id: block_stranded_ids).
+              where.not(shard_id: blocked_shard_ids).
               where(
                 ::Delayed::Job.select(1).from("#{::Delayed::Job.quoted_table_name} dj2").
                 where("dj2.next_in_strand = true OR dj2.source = 'JobsMigrator::StrandBlocker'").
@@ -261,6 +269,72 @@ module SwitchmanInstJobs
             scope: scope.where(shard_id: source_shard_ids).where(locked_by: nil),
             batch_size: batch_size
           )
+        end
+      end
+
+      def blocked_shards
+        ::Switchman::Shard.where(block_stranded: true).or(::Switchman::Shard.where(jobs_held: true))
+      end
+
+      def blocked_by_migrator?(job_scope)
+        job_scope.exists?(source: 'JobsMigrator::StrandBlocker') ||
+          blocked_shards.exists?(id: job_scope.distinct.pluck(:shard_id))
+      end
+
+      def blocked_strands
+        ::Delayed::Job.
+          where.not(strand: nil).
+          group(:strand).
+          having('NOT BOOL_OR(next_in_strand)').
+          pluck(:strand)
+      end
+
+      def unblock_strand!(strand, new_parallelism: nil)
+        job_scope = ::Delayed::Job.where(strand: strand)
+        raise JobsBlockedError if blocked_by_migrator?(job_scope)
+
+        ::Delayed::Job.transaction do
+          acquire_advisory_lock(:strand, strand)
+
+          new_parallelism ||= job_scope.pick('MAX(max_concurrent)')
+          if new_parallelism
+            needed_jobs = new_parallelism - job_scope.where(next_in_strand: true).count
+            if needed_jobs.positive?
+              job_scope.where(next_in_strand: false, locked_by: nil,
+                              singleton: nil).order(:strand_order_override, :id).
+                limit(needed_jobs).update_all(next_in_strand: true)
+            else
+              0
+            end
+          end
+        end
+      end
+
+      def blocked_singletons
+        ::Delayed::Job.
+          where(strand: nil).
+          where.not(singleton: nil).
+          group(:singleton).
+          having('NOT BOOL_OR(next_in_strand)').
+          pluck(:singleton)
+      end
+
+      def unblock_singleton!(singleton)
+        job_scope = ::Delayed::Job.where(strand: nil, singleton: singleton)
+        raise JobsBlockedError if blocked_by_migrator?(job_scope)
+
+        ::Delayed::Job.transaction do
+          acquire_advisory_lock(:singleton, singleton)
+
+          id, next_in_strand = job_scope.
+            group(:singleton).
+            pick('MIN(id), BOOL_OR(next_in_strand)')
+
+          if next_in_strand
+            0
+          elsif id
+            ::Delayed::Job.where(id: id).update_all(next_in_strand: true)
+          end
         end
       end
 
