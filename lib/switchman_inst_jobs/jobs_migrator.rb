@@ -285,8 +285,7 @@ module SwitchmanInstJobs
         ::Delayed::Job.
           where.not(strand: nil).
           group(:strand).
-          having('NOT BOOL_OR(next_in_strand)').
-          pluck(:strand)
+          having('NOT BOOL_OR(next_in_strand)')
       end
 
       def unblock_strand!(strand, new_parallelism: nil)
@@ -315,8 +314,7 @@ module SwitchmanInstJobs
           where(strand: nil).
           where.not(singleton: nil).
           group(:singleton).
-          having('NOT BOOL_OR(next_in_strand)').
-          pluck(:singleton)
+          having('NOT BOOL_OR(next_in_strand)')
       end
 
       def unblock_singleton!(singleton)
@@ -336,6 +334,12 @@ module SwitchmanInstJobs
             ::Delayed::Job.where(id: id).update_all(next_in_strand: true)
           end
         end
+      end
+
+      def blocked_job_count
+        ::Delayed::Job.from(blocked_strands.select('count(id) AS ssize')).sum('ssize').to_i +
+          ::Delayed::Job.from(blocked_singletons.select('count(id) AS ssize')).sum('ssize').to_i +
+          ::Delayed::Job.where(strand: nil, singleton: nil, next_in_strand: false).count
       end
 
       private

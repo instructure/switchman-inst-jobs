@@ -193,7 +193,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       shard1.update!(block_stranded: true)
       activate_target_shard do
         Kernel.delay(strand: 'strand2').sleep(0.1)
-        expect(described_class.blocked_strands).to eq(['strand2'])
+        expect(described_class.blocked_strands.pluck(:strand)).to eq(['strand2'])
       end
     end
 
@@ -258,7 +258,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       shard1.update!(block_stranded: true)
       activate_target_shard do
         Kernel.delay(singleton: 'singleton2').sleep(0.1)
-        expect(described_class.blocked_singletons).to eq(['singleton2'])
+        expect(described_class.blocked_singletons.pluck(:singleton)).to eq(['singleton2'])
       end
     end
 
@@ -295,6 +295,18 @@ describe SwitchmanInstJobs::JobsMigrator do
         expect do
           described_class.unblock_singleton!('singleton1')
         end.to raise_error(SwitchmanInstJobs::JobsBlockedError)
+      end
+    end
+  end
+
+  describe 'blocked_job_count' do
+    it 'counts blocked jobs across shards, singletons, and unstranded jobs' do
+      activate_target_shard do
+        shard1.update(block_stranded: true)
+        Kernel.delay(singleton: 'foo').sleep(0.1)
+        3.times { Kernel.delay(strand: 'baz').sleep(0.1) }
+        2.times { Kernel.delay(next_in_strand: false).sleep(0.1) }
+        expect(described_class.blocked_job_count).to eq 6
       end
     end
   end
