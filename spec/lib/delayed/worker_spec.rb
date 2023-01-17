@@ -7,7 +7,7 @@ describe SwitchmanInstJobs::Delayed::Worker do
   describe 'workers' do
     it 'should activate the jobs shard when calling run' do
       expect(Delayed::Job).to receive(:get_and_lock_next_available).once do
-        expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard
+        expect(Switchman::Shard.current(Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard
         nil
       end
       worker.run
@@ -15,7 +15,7 @@ describe SwitchmanInstJobs::Delayed::Worker do
 
     it 'should activate the jobs shard when calling start' do
       expect(Delayed::Job).to receive(:get_and_lock_next_available).once do
-        expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard
+        expect(Switchman::Shard.current(Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard
         worker.instance_variable_set(:@exit, true)
         nil
       end

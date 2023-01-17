@@ -1,7 +1,7 @@
 describe SwitchmanInstJobs::GuardRail do
   it 'should not change environments during migrations' do
-    ::ActiveRecord::Migration.verbose = false
-    migration = Class.new(::ActiveRecord::Migration[4.2])
+    ActiveRecord::Migration.verbose = false
+    migration = Class.new(ActiveRecord::Migration[4.2])
 
     def migration.up
       GuardRail.activate(:secondary) do

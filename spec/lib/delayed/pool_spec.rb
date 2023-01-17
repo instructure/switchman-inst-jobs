@@ -7,7 +7,7 @@ describe SwitchmanInstJobs::Delayed::Pool do
   describe 'pools' do
     it "should unlock against the worker's shard" do
       allow(Delayed::Job).to receive(:unlock_orphaned_jobs) do
-        expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).
+        expect(Switchman::Shard.current(Delayed::Backend::ActiveRecord::AbstractJob)).
           to eq Switchman::Shard.default.delayed_jobs_shard
         0
       end
@@ -16,7 +16,7 @@ describe SwitchmanInstJobs::Delayed::Pool do
       )
 
       allow(Delayed::Job).to receive(:unlock_orphaned_jobs) do
-        expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard
+        expect(Switchman::Shard.current(Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard
         0
       end
       Delayed::Pool.new({}).send(:unlock_orphaned_jobs, worker, 1234)
@@ -32,7 +32,7 @@ describe SwitchmanInstJobs::Delayed::Pool do
       )
 
       allow(Delayed::Job).to receive(:unlock_orphaned_jobs) do
-        expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard
+        expect(Switchman::Shard.current(Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard
         0
       end
       pool.send(:unlock_orphaned_jobs)
@@ -49,7 +49,7 @@ describe SwitchmanInstJobs::Delayed::Pool do
 
       shards = []
       allow(Delayed::Job).to receive(:unlock_orphaned_jobs) do
-        shards << Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)
+        shards << Switchman::Shard.current(Delayed::Backend::ActiveRecord::AbstractJob)
         0
       end
       pool.send(:unlock_orphaned_jobs)

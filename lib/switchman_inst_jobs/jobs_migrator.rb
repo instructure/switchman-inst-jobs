@@ -429,7 +429,7 @@ module SwitchmanInstJobs
             [name, value]
           end.compact.to_h
         end
-        return if records.length.zero?
+        return if records.empty?
 
         keys = records.first.keys
 

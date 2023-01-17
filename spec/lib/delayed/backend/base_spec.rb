@@ -27,16 +27,16 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
 
   describe '#enqueue' do
     it 'should enqueue on the correct shard' do
-      expect(::ActiveRecord::Migration).to receive(:open_migrations).and_return(1)
-      expect(::Switchman::Shard.current.delayed_jobs_shard).
+      expect(ActiveRecord::Migration).to receive(:open_migrations).and_return(1)
+      expect(Switchman::Shard.current.delayed_jobs_shard).
         to receive(:activate).at_least(:once).and_return('success')
 
       expect(harness.class.enqueue(:fake_args)).to eq('success')
     end
 
     it 'should enqueue with next_in_strand=true if the strand is empty and block_stranded is false' do
-      ::Switchman::Shard.current.block_stranded = false
-      ::Switchman::Shard.current.save!
+      Switchman::Shard.current.block_stranded = false
+      Switchman::Shard.current.save!
 
       Kernel.delay(strand: 'strand78').sleep(0.1)
       expect(Delayed::Job.where(strand: 'strand78').count).to eq 1
@@ -44,21 +44,21 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
     end
 
     it 'should enqueue with next_in_strand=false if the strand is empty and block_stranded is true' do
-      ::Switchman::Shard.current.block_stranded = true
-      ::Switchman::Shard.current.save!
+      Switchman::Shard.current.block_stranded = true
+      Switchman::Shard.current.save!
 
       Kernel.delay(strand: 'strand79').sleep(0.1)
       expect(Delayed::Job.where(strand: 'strand79').count).to eq 1
       expect(Delayed::Job.where(strand: 'strand79').first.next_in_strand).to eq false
 
-      ::Switchman::Shard.current.block_stranded = false
-      ::Switchman::Shard.current.save!
+      Switchman::Shard.current.block_stranded = false
+      Switchman::Shard.current.save!
     end
   end
 
   describe '#current_shard' do
     it 'can load the current shard based on stored id' do
-      expect(::Switchman::Shard).to receive(:lookup).once.with(4).and_return(4)
+      expect(Switchman::Shard).to receive(:lookup).once.with(4).and_return(4)
       harness.shard_id = 4
       expect(harness.current_shard).to eq(4)
     end
@@ -72,7 +72,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
 
     it 'nulls out the shard id for the default shard' do
       harness.shard_id = shard.id
-      harness.current_shard = ::Switchman::DefaultShard.instance
+      harness.current_shard = Switchman::DefaultShard.instance
       expect(harness.shard_id).to be_nil
     end
 
@@ -100,7 +100,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
     it 'should activate the associated job shard' do
       payload_object = double
       expect(payload_object).to receive(:perform).once
-      expect_any_instance_of(::Delayed::Backend::Base).
+      expect_any_instance_of(Delayed::Backend::Base).
         to receive(:payload_object) { payload_object }
       job = nil
 
@@ -122,37 +122,37 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
     end
 
     it 'raises an error for invalid shards' do
-      unused_id = ::Switchman::Shard.maximum(:id) + 1
+      unused_id = Switchman::Shard.maximum(:id) + 1
       harness.shard_id = unused_id
       expect { harness.deserialize('') }.
         to raise_error("Shard not found: #{unused_id}")
     end
 
     it 'standardizes db failures' do
-      payload = ::Delayed::PerformableMethod.new(project, :id)
-      job = ::Delayed::Job.create! payload_object: payload
+      payload = Delayed::PerformableMethod.new(project, :id)
+      job = Delayed::Job.create! payload_object: payload
       job.current_shard = project.shard
       job.save!
 
       destroyed_shard_id = job.current_shard.id
       project.shard.destroy
 
-      reloaded_job = ::Delayed::Job.find_available(1).first
+      reloaded_job = Delayed::Job.find_available(1).first
 
       expect { reloaded_job.invoke_job }.
         to raise_error("Shard not found: #{destroyed_shard_id}")
     end
 
     it 'passes exception through if the shard still exists' do
-      expect_any_instance_of(::Delayed::Backend::Base).
+      expect_any_instance_of(Delayed::Backend::Base).
         to receive(:deserialize).once.and_raise(PG::ConnectionBad)
 
-      payload = ::Delayed::PerformableMethod.new(project, :id)
-      job = ::Delayed::Job.create! payload_object: payload
+      payload = Delayed::PerformableMethod.new(project, :id)
+      job = Delayed::Job.create! payload_object: payload
       job.current_shard = project.shard
       job.save!
 
-      reloaded_job = ::Delayed::Job.find_available(1).first
+      reloaded_job = Delayed::Job.find_available(1).first
 
       expect { reloaded_job.invoke_job }.
         to raise_error(PG::ConnectionBad)

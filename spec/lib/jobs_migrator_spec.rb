@@ -4,16 +4,16 @@ describe SwitchmanInstJobs::JobsMigrator do
   let(:shard1) { @shard1 }
 
   def activate_source_shard
-    Switchman::Shard.activate(::ActiveRecord::Base => shard1,
-                              ::Delayed::Backend::ActiveRecord::AbstractJob => Switchman::Shard.default) do
-      expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq Switchman::Shard.default
+    Switchman::Shard.activate(ActiveRecord::Base => shard1,
+                              Delayed::Backend::ActiveRecord::AbstractJob => Switchman::Shard.default) do
+      expect(Switchman::Shard.current(Delayed::Backend::ActiveRecord::AbstractJob)).to eq Switchman::Shard.default
       yield
     end
   end
 
   def activate_target_shard
-    shard1.activate(::ActiveRecord::Base, ::Delayed::Backend::ActiveRecord::AbstractJob) do
-      expect(Switchman::Shard.current(::Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard1
+    shard1.activate(ActiveRecord::Base, Delayed::Backend::ActiveRecord::AbstractJob) do
+      expect(Switchman::Shard.current(Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard1
       yield
     end
   end
@@ -207,7 +207,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       activate_target_shard do
         count = described_class.unblock_strand!('strand1')
         expect(count).to eq 1
-        expect(::Delayed::Job.where(strand: 'strand1', next_in_strand: true).count).to eq 1
+        expect(Delayed::Job.where(strand: 'strand1', next_in_strand: true).count).to eq 1
       end
     end
 
@@ -221,7 +221,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       activate_target_shard do
         count = described_class.unblock_strand!('strand1')
         expect(count).to eq 2
-        expect(::Delayed::Job.where(strand: 'strand1', next_in_strand: true).count).to eq 2
+        expect(Delayed::Job.where(strand: 'strand1', next_in_strand: true).count).to eq 2
       end
     end
 
@@ -272,7 +272,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       activate_target_shard do
         count = described_class.unblock_singleton!('singleton1')
         expect(count).to eq 1
-        expect(::Delayed::Job.find_by(singleton: 'singleton1').next_in_strand).to eq true
+        expect(Delayed::Job.find_by(singleton: 'singleton1').next_in_strand).to eq true
       end
     end
 
