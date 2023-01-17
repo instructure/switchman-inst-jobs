@@ -123,7 +123,7 @@ module SwitchmanInstJobs
               select(:id)))
           end
           @jobs_scope_empty = !scope.exists? unless instance_variable_defined?(:@jobs_scope_empty)
-          return [::Switchman::Shard.default] if @jobs_scope_empty
+          return ::Switchman::Shard.where(id: ::Switchman::Shard.default.id) if @jobs_scope_empty
 
           ::Switchman::Shard.merge(scope)
         end
