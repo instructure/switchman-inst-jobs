@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module SwitchmanInstJobs
   class TimedCache
     def initialize(timeout, &block)

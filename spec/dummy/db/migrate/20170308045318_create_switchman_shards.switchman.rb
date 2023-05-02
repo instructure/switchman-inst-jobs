@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # This migration comes from switchman (originally 20130328212039)
 class CreateSwitchmanShards < ActiveRecord::Migration[4.2]
   def change

@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 describe SwitchmanInstJobs::GuardRail do
-  it 'should not change environments during migrations' do
+  it "should not change environments during migrations" do
     ActiveRecord::Migration.verbose = false
     migration = Class.new(ActiveRecord::Migration[4.2])
 
@@ -16,7 +18,7 @@ describe SwitchmanInstJobs::GuardRail do
     expect(migration.instance_variable_get(:@guard_rail_env)).to eq :deploy
   end
 
-  it 'changes environments outside of migrations' do
+  it "changes environments outside of migrations" do
     GuardRail.activate(:deploy) do
       GuardRail.activate(:secondary) do
         expect(GuardRail.environment).to eq :secondary

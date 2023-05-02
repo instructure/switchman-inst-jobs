@@ -1,5 +1,7 @@
-require 'set'
-require 'parallel'
+# frozen_string_literal: true
+
+require "set"
+require "parallel"
 
 module SwitchmanInstJobs
   class JobsMigrator
@@ -50,7 +52,7 @@ module SwitchmanInstJobs
         # Do the updates in batches and then just clear redis instead of clearing them one at a time
         target_shards.each do |target_shard, shards|
           updates = { delayed_jobs_shard_id: target_shard, block_stranded: true }
-          updates[:updated_at] = Time.zone.now if ::Switchman::Shard.column_names.include?('updated_at')
+          updates[:updated_at] = Time.zone.now if ::Switchman::Shard.column_names.include?("updated_at")
           ::Switchman::Shard.where(id: shards).update_all(updates)
         end
         clear_shard_cache(default: ::Switchman::Shard.exists?(id: target_shards.values.flatten, default: true))
@@ -85,8 +87,8 @@ module SwitchmanInstJobs
       end
 
       def clear_shard_cache(debug_message = nil, default:)
-        ::Switchman.cache.delete_matched('shard/*')
-        ::Switchman.cache.delete('default_shard') if default
+        ::Switchman.cache.delete_matched("shard/*")
+        ::Switchman.cache.delete("default_shard") if default
         Rails.logger.debug { "Waiting for caches to clear #{debug_message}" }
         # Wait a little over the 60 second in-process shard cache clearing
         # threshold to ensure that all new stranded jobs are now being
@@ -96,9 +98,9 @@ module SwitchmanInstJobs
       end
 
       def acquire_advisory_lock(type, name)
-        @quoted_function_name ||= ::Delayed::Job.connection.quote_table_name('half_md5_as_bigint')
+        @quoted_function_name ||= ::Delayed::Job.connection.quote_table_name("half_md5_as_bigint")
 
-        value = type == :singleton ? "singleton:#{name}" : name
+        value = (type == :singleton) ? "singleton:#{name}" : name
         ::Delayed::Job.connection.execute(
           ::Delayed::Job.sanitize_sql_for_conditions(
             ["SELECT pg_advisory_xact_lock(#{@quoted_function_name}(?))", value]
@@ -162,8 +164,8 @@ module SwitchmanInstJobs
 
                     # the rest of 3) is taken care of here
                     # make sure that all the jobs moved over are NOT next in strand
-                    ::Delayed::Job.where(next_in_strand: true, locked_by: nil, **{ column => value }).
-                      update_all(next_in_strand: false)
+                    ::Delayed::Job.where(next_in_strand: true, locked_by: nil, **{ column => value })
+                                  .update_all(next_in_strand: false)
                   end
 
                   # 4) is taken care of here, by leaving next_in_strand alone and
@@ -184,8 +186,8 @@ module SwitchmanInstJobs
         }
 
         strand_scope = ::Delayed::Job.shard(source_shard).where.not(strand: nil)
-        singleton_scope = ::Delayed::Job.shard(source_shard).where('strand IS NULL AND singleton IS NOT NULL')
-        all_scope = ::Delayed::Job.shard(source_shard).where('strand IS NOT NULL OR singleton IS NOT NULL')
+        singleton_scope = ::Delayed::Job.shard(source_shard).where("strand IS NULL AND singleton IS NOT NULL")
+        all_scope = ::Delayed::Job.shard(source_shard).where("strand IS NOT NULL OR singleton IS NOT NULL")
 
         singleton_blocker_additional_kwargs = {
           locked_at: DateTime.now,
@@ -206,8 +208,8 @@ module SwitchmanInstJobs
         shard_map = build_shard_map(all_scope, source_shard)
         shard_map.each do |(target_shard, source_shard_ids)|
           target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
-            updated = ::Switchman::Shard.where(id: source_shard_ids, block_stranded: true).
-              update_all(block_stranded: false)
+            updated = ::Switchman::Shard.where(id: source_shard_ids, block_stranded: true)
+                                        .update_all(block_stranded: false)
             # If this is being manually re-run for some reason to clean something up, don't wait for nothing to happen
             unless updated.zero?
               clear_shard_cache("(#{source_shard.id} -> #{target_shard.id})",
@@ -227,16 +229,16 @@ module SwitchmanInstJobs
       def unblock_strands(target_shard, batch_size: 10_000)
         blocked_shard_ids = blocked_shards.pluck(:id)
         query = lambda { |column, scope|
-          ::Delayed::Job.
-            where(id: ::Delayed::Job.select("DISTINCT ON (#{column}) id").
-              where(scope).
-              where.not(shard_id: blocked_shard_ids).
-              where(
-                ::Delayed::Job.select(1).from("#{::Delayed::Job.quoted_table_name} dj2").
-                where("dj2.next_in_strand = true OR dj2.source = 'JobsMigrator::StrandBlocker'").
-                where("dj2.#{column} = delayed_jobs.#{column}").arel.exists.not
-              ).
-              order(column, :strand_order_override, :id)).limit(batch_size)
+          ::Delayed::Job
+            .where(id: ::Delayed::Job.select("DISTINCT ON (#{column}) id")
+              .where(scope)
+              .where.not(shard_id: blocked_shard_ids)
+              .where(
+                ::Delayed::Job.select(1).from("#{::Delayed::Job.quoted_table_name} dj2")
+                .where("dj2.next_in_strand = true OR dj2.source = 'JobsMigrator::StrandBlocker'")
+                .where("dj2.#{column} = delayed_jobs.#{column}").arel.exists.not
+              )
+              .order(column, :strand_order_override, :id)).limit(batch_size)
         }
 
         target_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
@@ -247,12 +249,12 @@ module SwitchmanInstJobs
           # batches
 
           loop do
-            break if query.call(:strand, 'strand IS NOT NULL').update_all(next_in_strand: true).zero?
+            break if query.call(:strand, "strand IS NOT NULL").update_all(next_in_strand: true).zero?
           end
 
           loop do
             break if query.call(:singleton,
-                                'strand IS NULL AND singleton IS NOT NULL').update_all(next_in_strand: true).zero?
+                                "strand IS NULL AND singleton IS NOT NULL").update_all(next_in_strand: true).zero?
           end
         end
       end
@@ -277,15 +279,15 @@ module SwitchmanInstJobs
       end
 
       def blocked_by_migrator?(job_scope)
-        job_scope.exists?(source: 'JobsMigrator::StrandBlocker') ||
+        job_scope.exists?(source: "JobsMigrator::StrandBlocker") ||
           blocked_shards.exists?(id: job_scope.distinct.pluck(:shard_id))
       end
 
       def blocked_strands
-        ::Delayed::Job.
-          where.not(strand: nil).
-          group(:strand).
-          having('NOT BOOL_OR(next_in_strand)')
+        ::Delayed::Job
+          .where.not(strand: nil)
+          .group(:strand)
+          .having("NOT BOOL_OR(next_in_strand)")
       end
 
       def unblock_strand!(strand, new_parallelism: nil)
@@ -295,13 +297,14 @@ module SwitchmanInstJobs
         ::Delayed::Job.transaction do
           acquire_advisory_lock(:strand, strand)
 
-          new_parallelism ||= job_scope.pick('MAX(max_concurrent)')
+          new_parallelism ||= job_scope.pick("MAX(max_concurrent)")
           if new_parallelism
             needed_jobs = new_parallelism - job_scope.where(next_in_strand: true).count
             if needed_jobs.positive?
-              job_scope.where(next_in_strand: false, locked_by: nil,
-                              singleton: nil).order(:strand_order_override, :id).
-                limit(needed_jobs).update_all(next_in_strand: true)
+              job_scope.where(next_in_strand: false,
+                              locked_by: nil,
+                              singleton: nil).order(:strand_order_override, :id)
+                       .limit(needed_jobs).update_all(next_in_strand: true)
             else
               0
             end
@@ -310,11 +313,11 @@ module SwitchmanInstJobs
       end
 
       def blocked_singletons
-        ::Delayed::Job.
-          where(strand: nil).
-          where.not(singleton: nil).
-          group(:singleton).
-          having('NOT BOOL_OR(next_in_strand)')
+        ::Delayed::Job
+          .where(strand: nil)
+          .where.not(singleton: nil)
+          .group(:singleton)
+          .having("NOT BOOL_OR(next_in_strand)")
       end
 
       def unblock_singleton!(singleton)
@@ -324,9 +327,9 @@ module SwitchmanInstJobs
         ::Delayed::Job.transaction do
           acquire_advisory_lock(:singleton, singleton)
 
-          id, next_in_strand = job_scope.
-            group(:singleton).
-            pick('MIN(id), BOOL_OR(next_in_strand)')
+          id, next_in_strand = job_scope
+                               .group(:singleton)
+                               .pick("MIN(id), BOOL_OR(next_in_strand)")
 
           if next_in_strand
             0
@@ -337,8 +340,8 @@ module SwitchmanInstJobs
       end
 
       def blocked_job_count
-        ::Delayed::Job.from(blocked_strands.select('count(id) AS ssize')).sum('ssize').to_i +
-          ::Delayed::Job.from(blocked_singletons.select('count(id) AS ssize')).sum('ssize').to_i +
+        ::Delayed::Job.from(blocked_strands.select("count(id) AS ssize")).sum("ssize").to_i +
+          ::Delayed::Job.from(blocked_singletons.select("count(id) AS ssize")).sum("ssize").to_i +
           ::Delayed::Job.where(strand: nil, singleton: nil, next_in_strand: false).count
       end
 
@@ -347,8 +350,8 @@ module SwitchmanInstJobs
       def create_blocker_job(**kwargs)
         first_job = ::Delayed::Job.create!(**kwargs, next_in_strand: false)
         first_job.payload_object = ::Delayed::PerformableMethod.new(Kernel, :sleep, args: [0])
-        first_job.tag = 'Kernel.sleep'
-        first_job.source = 'JobsMigrator::StrandBlocker'
+        first_job.tag = "Kernel.sleep"
+        first_job.source = "JobsMigrator::StrandBlocker"
         first_job.max_attempts = 1
         # If we ever have jobs left over from 9999 jobs moves of a single shard,
         # something has gone terribly wrong
@@ -373,7 +376,7 @@ module SwitchmanInstJobs
       def batch_move_jobs(target_shard:, source_shard:, scope:, batch_size:)
         while scope.exists?
           # Adapted from get_and_lock_next_available in delayed/backend/active_record.rb
-          target_jobs = scope.limit(batch_size).lock('FOR UPDATE SKIP LOCKED')
+          target_jobs = scope.limit(batch_size).lock("FOR UPDATE SKIP LOCKED")
 
           query = source_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
             <<~SQL
@@ -420,23 +423,23 @@ module SwitchmanInstJobs
       # Once we stop supporting rails 5.2 we can just use insert_all from activerecord
       def bulk_insert_jobs(objects)
         records = objects.map do |object|
-          object.attributes.map do |(name, value)|
+          object.attributes.filter_map do |(name, value)|
             next if name == ::Delayed::Job.primary_key
 
             if (type = ::Delayed::Job.attribute_types[name]).is_a?(::ActiveRecord::Type::Serialized)
               value = type.serialize(value)
             end
             [name, value]
-          end.compact.to_h
+          end.to_h
         end
         return if records.empty?
 
         keys = records.first.keys
 
         connection = ::Delayed::Job.connection
-        quoted_keys = keys.map { |k| connection.quote_column_name(k) }.join(', ')
+        quoted_keys = keys.map { |k| connection.quote_column_name(k) }.join(", ")
 
-        connection.execute 'DROP TABLE IF EXISTS delayed_jobs_bulk_copy'
+        connection.execute "DROP TABLE IF EXISTS delayed_jobs_bulk_copy"
         connection.execute "CREATE TEMPORARY TABLE delayed_jobs_bulk_copy
           (LIKE #{::Delayed::Job.quoted_table_name} INCLUDING DEFAULTS)"
         connection.execute "COPY delayed_jobs_bulk_copy (#{quoted_keys}) FROM STDIN"
@@ -448,8 +451,8 @@ module SwitchmanInstJobs
         result = connection.raw_connection.get_result
         begin
           result.check
-        rescue StandardError => e
-          raise connection.send(:translate_exception, e, 'COPY FROM STDIN')
+        rescue => e
+          raise connection.send(:translate_exception, e, "COPY FROM STDIN")
         end
         connection.execute "INSERT INTO #{::Delayed::Job.quoted_table_name} (#{quoted_keys})
           SELECT #{quoted_keys} FROM delayed_jobs_bulk_copy
@@ -464,7 +467,7 @@ module SwitchmanInstJobs
         elsif value.is_a?(::ActiveRecord::ConnectionAdapters::PostgreSQL::OID::Array::Data)
           quote_text(encode_array(value))
         else
-          hash = { "\n" => '\\n', "\r" => '\\r', "\t" => '\\t', '\\' => '\\\\' }
+          hash = { "\n" => '\\n', "\r" => '\\r', "\t" => '\\t', "\\" => "\\\\" }
           value.to_s.gsub(/[\n\r\t\\]/) { |c| hash[c] }
         end
       end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module SwitchmanInstJobs
   module Delayed
     module Worker
@@ -9,13 +11,13 @@ module SwitchmanInstJobs
         module ClassMethods
           def munge_service_name(shard)
             # munge the name to add the current shard
-            original_service_name = ::Delayed::Settings.worker_health_check_config['service_name']
+            original_service_name = ::Delayed::Settings.worker_health_check_config["service_name"]
             consul_service_name = ::Delayed::Worker::ConsulHealthCheck::DEFAULT_SERVICE_NAME
-            ::Delayed::Settings.worker_health_check_config['service_name'] =
+            ::Delayed::Settings.worker_health_check_config["service_name"] =
               "#{original_service_name || consul_service_name}/#{shard.id}"
             yield
           ensure
-            ::Delayed::Settings.worker_health_check_config['service_name'] = original_service_name
+            ::Delayed::Settings.worker_health_check_config["service_name"] = original_service_name
           end
 
           def reschedule_abandoned_jobs

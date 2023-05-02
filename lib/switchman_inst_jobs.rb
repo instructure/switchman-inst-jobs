@@ -1,5 +1,7 @@
-require 'inst-jobs'
-require 'switchman'
+# frozen_string_literal: true
+
+require "inst-jobs"
+require "switchman"
 
 module SwitchmanInstJobs
   cattr_accessor :delayed_jobs_shard_fallback
@@ -35,21 +37,21 @@ module SwitchmanInstJobs
   end
 end
 
-require 'switchman_inst_jobs/active_record/connection_adapters/postgresql_adapter'
-require 'switchman_inst_jobs/active_record/migration'
-require 'switchman_inst_jobs/delayed/settings'
-require 'switchman_inst_jobs/delayed/backend/active_record/abstract_job'
-require 'switchman_inst_jobs/delayed/backend/base'
-require 'switchman_inst_jobs/delayed/message_sending'
-require 'switchman_inst_jobs/delayed/pool'
-require 'switchman_inst_jobs/delayed/worker'
-require 'switchman_inst_jobs/delayed/worker/health_check'
-require 'switchman_inst_jobs/engine'
-require 'switchman_inst_jobs/guard_rail'
-require 'switchman_inst_jobs/jobs_migrator'
-require 'switchman_inst_jobs/new_relic'
-require 'switchman_inst_jobs/switchman/database_server'
-require 'switchman_inst_jobs/switchman/default_shard'
-require 'switchman_inst_jobs/switchman/shard'
-require 'switchman_inst_jobs/timed_cache'
-require 'switchman_inst_jobs/yaml_extensions'
+require "switchman_inst_jobs/active_record/connection_adapters/postgresql_adapter"
+require "switchman_inst_jobs/active_record/migration"
+require "switchman_inst_jobs/delayed/settings"
+require "switchman_inst_jobs/delayed/backend/active_record/abstract_job"
+require "switchman_inst_jobs/delayed/backend/base"
+require "switchman_inst_jobs/delayed/message_sending"
+require "switchman_inst_jobs/delayed/pool"
+require "switchman_inst_jobs/delayed/worker"
+require "switchman_inst_jobs/delayed/worker/health_check"
+require "switchman_inst_jobs/engine"
+require "switchman_inst_jobs/guard_rail"
+require "switchman_inst_jobs/jobs_migrator"
+require "switchman_inst_jobs/new_relic"
+require "switchman_inst_jobs/switchman/database_server"
+require "switchman_inst_jobs/switchman/default_shard"
+require "switchman_inst_jobs/switchman/shard"
+require "switchman_inst_jobs/timed_cache"
+require "switchman_inst_jobs/yaml_extensions"

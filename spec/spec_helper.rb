@@ -1,26 +1,28 @@
-ENV['RAILS_ENV'] ||= 'test'
+# frozen_string_literal: true
 
-if /^2\.6/ =~ RUBY_VERSION && /6\.1/ =~ ENV.fetch('BUNDLE_GEMFILE', nil) # Limit coverage to one build
-  require 'simplecov'
+ENV["RAILS_ENV"] ||= "test"
+
+if /^2\.6/ =~ RUBY_VERSION && ENV.fetch("BUNDLE_GEMFILE", nil).include?("6.1") # Limit coverage to one build
+  require "simplecov"
 
   SimpleCov.start do
     enable_coverage :branch
     minimum_coverage 90
 
-    add_filter 'db/migrate'
-    add_filter 'lib/switchman_inst_jobs/version.rb'
-    add_filter 'lib/switchman_inst_jobs/new_relic.rb'
-    add_filter 'spec'
+    add_filter "db/migrate"
+    add_filter "lib/switchman_inst_jobs/version.rb"
+    add_filter "lib/switchman_inst_jobs/new_relic.rb"
+    add_filter "spec"
 
-    track_files 'lib/**/*.rb'
+    track_files "lib/**/*.rb"
   end
 end
 
-require 'pry'
+require "pry"
 
-require File.expand_path('dummy/config/environment', __dir__)
-require 'rspec/rails'
-require 'switchman/r_spec_helper'
+require File.expand_path("dummy/config/environment", __dir__)
+require "rspec/rails"
+require "switchman/r_spec_helper"
 
 # No reason to add default sleep time to specs:
 Delayed::Settings.sleep_delay         = 0
@@ -36,7 +38,7 @@ RSpec.configure do |config|
     mocks.allow_message_expectations_on_nil = false
   end
 
-  config.default_formatter = 'doc' if config.files_to_run.one?
+  config.default_formatter = "doc" if config.files_to_run.one?
 
   config.filter_rails_from_backtrace!
 

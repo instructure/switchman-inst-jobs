@@ -1,18 +1,21 @@
+# frozen_string_literal: true
+
 class AddStrandOrderOverride < ActiveRecord::Migration[4.2]
   disable_ddl_transaction!
 
   def up
     add_column :delayed_jobs, :strand_order_override, :integer, default: 0, null: false
     add_column :failed_jobs, :strand_order_override, :integer, default: 0, null: false
-    add_index :delayed_jobs, %i[strand strand_order_override id],
+    add_index :delayed_jobs,
+              %i[strand strand_order_override id],
               algorithm: :concurrently,
-              where: 'strand IS NOT NULL',
-              name: 'next_in_strand_index'
+              where: "strand IS NOT NULL",
+              name: "next_in_strand_index"
 
-    if connection.adapter_name == 'PostgreSQL'
+    if connection.adapter_name == "PostgreSQL"
       # Use the strand_order_override as the primary sorting mechanism (useful when moving between jobs queues without preserving ID ordering)
       execute(<<-SQL)
-        CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_after_delete_row_tr_fn')} () RETURNS trigger AS $$
+        CREATE OR REPLACE FUNCTION #{connection.quote_table_name("delayed_jobs_after_delete_row_tr_fn")} () RETURNS trigger AS $$
         DECLARE
           running_count integer;
           should_lock boolean;
@@ -67,9 +70,9 @@ class AddStrandOrderOverride < ActiveRecord::Migration[4.2]
     remove_column :delayed_jobs, :strand_order_override, :integer
     remove_column :failed_jobs, :strand_order_override, :integer
 
-    if connection.adapter_name == 'PostgreSQL'
+    if connection.adapter_name == "PostgreSQL"
       execute(<<-SQL)
-        CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_after_delete_row_tr_fn')} () RETURNS trigger AS $$
+        CREATE OR REPLACE FUNCTION #{connection.quote_table_name("delayed_jobs_after_delete_row_tr_fn")} () RETURNS trigger AS $$
         DECLARE
           running_count integer;
           should_lock boolean;

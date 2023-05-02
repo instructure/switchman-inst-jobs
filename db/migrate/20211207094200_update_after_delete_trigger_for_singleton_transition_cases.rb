@@ -3,7 +3,7 @@
 class UpdateAfterDeleteTriggerForSingletonTransitionCases < ActiveRecord::Migration[5.2]
   def up
     execute(<<~SQL)
-      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_after_delete_row_tr_fn')} () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name("delayed_jobs_after_delete_row_tr_fn")} () RETURNS trigger AS $$
       DECLARE
         next_strand varchar;
         running_count integer;
@@ -104,7 +104,7 @@ class UpdateAfterDeleteTriggerForSingletonTransitionCases < ActiveRecord::Migrat
 
   def down
     execute(<<~SQL)
-      CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_after_delete_row_tr_fn')} () RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION #{connection.quote_table_name("delayed_jobs_after_delete_row_tr_fn")} () RETURNS trigger AS $$
       DECLARE
         running_count integer;
         should_lock boolean;

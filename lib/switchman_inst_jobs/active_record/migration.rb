@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module SwitchmanInstJobs
   module ActiveRecord
     module Migration
@@ -19,10 +21,10 @@ module SwitchmanInstJobs
       end
 
       def copy(destination, sources, options = {})
-        if sources.delete('delayed_engine')
+        if sources.delete("delayed_engine")
           # rubocop:disable Rails/Output
-          puts 'NOTE: Not installing delayed_engine migrations in an application using switchman-inst-jobs'
-          puts '(use rake switchman_inst_jobs:install:migrations instead)'
+          puts "NOTE: Not installing delayed_engine migrations in an application using switchman-inst-jobs"
+          puts "(use rake switchman_inst_jobs:install:migrations instead)"
           # rubocop:enable Rails/Output
         end
         super

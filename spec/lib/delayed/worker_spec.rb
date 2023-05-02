@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 describe SwitchmanInstJobs::Delayed::Worker do
   include Switchman::RSpecHelper
 
   let(:shard) { @shard1 }
   let(:worker) { Delayed::Worker.new(worker_max_job_count: 1, shard: shard.id) }
 
-  describe 'workers' do
-    it 'should activate the jobs shard when calling run' do
+  describe "workers" do
+    it "should activate the jobs shard when calling run" do
       expect(Delayed::Job).to receive(:get_and_lock_next_available).once do
         expect(Switchman::Shard.current(Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard
         nil
@@ -13,7 +15,7 @@ describe SwitchmanInstJobs::Delayed::Worker do
       worker.run
     end
 
-    it 'should activate the jobs shard when calling start' do
+    it "should activate the jobs shard when calling start" do
       expect(Delayed::Job).to receive(:get_and_lock_next_available).once do
         expect(Switchman::Shard.current(Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard
         worker.instance_variable_set(:@exit, true)
@@ -22,13 +24,13 @@ describe SwitchmanInstJobs::Delayed::Worker do
       worker.start
     end
 
-    it 'appends current shard to health check service name' do
+    it "appends current shard to health check service name" do
       Delayed::Settings.worker_health_check_type = :consul
-      Delayed::Settings.worker_health_check_config['service_name'] = 'inst-jobs'
+      Delayed::Settings.worker_health_check_config["service_name"] = "inst-jobs"
       worker = Delayed::Worker.new
-      expect(worker.health_check.send(:service_name)).
-        to eq "inst-jobs/#{Switchman::Shard.default.id}"
-      expect(Delayed::Settings.worker_health_check_config['service_name']).to eq 'inst-jobs'
+      expect(worker.health_check.send(:service_name))
+        .to eq "inst-jobs/#{Switchman::Shard.default.id}"
+      expect(Delayed::Settings.worker_health_check_config["service_name"]).to eq "inst-jobs"
     ensure
       Delayed::Settings.worker_health_check_type = :none
       Delayed::Settings.worker_health_check_config.clear

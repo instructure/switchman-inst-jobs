@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe SwitchmanInstJobs::JobsMigrator do
   include Switchman::RSpecHelper
 
@@ -28,283 +30,283 @@ describe SwitchmanInstJobs::JobsMigrator do
     shard1.save!
   end
 
-  context 'unblock_strands' do
-    it 'should unblock stranded jobs when block_stranded becomes false' do
+  context "unblock_strands" do
+    it "should unblock stranded jobs when block_stranded becomes false" do
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        2.times { Kernel.delay(strand: 'strand1').sleep(0.1) }
-        2.times { Kernel.delay(strand: 'strand2').sleep(0.2) }
+        2.times { Kernel.delay(strand: "strand1").sleep(0.1) }
+        2.times { Kernel.delay(strand: "strand2").sleep(0.2) }
 
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 4
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 4
       end
 
       described_class.unblock_strands(shard1)
       activate_target_shard do
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 4
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 4
       end
 
       shard1.update!(block_stranded: false)
       described_class.unblock_strands(shard1)
       activate_target_shard do
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 2
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 2
       end
     end
 
-    it 'should unblock the strand with the highest priority' do
+    it "should unblock the strand with the highest priority" do
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        Kernel.delay(strand: 'strand1', strand_order_override: -100).sleep(0.1)
-        Kernel.delay(strand: 'strand1', strand_order_override: 100).sleep(0.1)
-        Kernel.delay(strand: 'strand2', strand_order_override: 100).sleep(0.2)
-        Kernel.delay(strand: 'strand2', strand_order_override: -100).sleep(0.2)
+        Kernel.delay(strand: "strand1", strand_order_override: -100).sleep(0.1)
+        Kernel.delay(strand: "strand1", strand_order_override: 100).sleep(0.1)
+        Kernel.delay(strand: "strand2", strand_order_override: 100).sleep(0.2)
+        Kernel.delay(strand: "strand2", strand_order_override: -100).sleep(0.2)
 
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 4
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 4
       end
 
       shard1.update!(block_stranded: false)
       described_class.unblock_strands(shard1, batch_size: 1)
       activate_target_shard do
-        expect(Delayed::Job.where(strand_order_override: -100, next_in_strand: 't').count).to eq 2
-        expect(Delayed::Job.where(strand_order_override: 100, next_in_strand: 'f').count).to eq 2
+        expect(Delayed::Job.where(strand_order_override: -100, next_in_strand: "t").count).to eq 2
+        expect(Delayed::Job.where(strand_order_override: 100, next_in_strand: "f").count).to eq 2
       end
     end
 
-    it 'should not unblock stranded jobs when a strand blocker job exists' do
+    it "should not unblock stranded jobs when a strand blocker job exists" do
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        Kernel.delay(strand: 'strand1').sleep(0.1)
-        Kernel.delay(strand: 'strand2').sleep(0.2)
-        Kernel.delay(strand: 'strand1', source: 'JobsMigrator::StrandBlocker').sleep(0.1)
+        Kernel.delay(strand: "strand1").sleep(0.1)
+        Kernel.delay(strand: "strand2").sleep(0.2)
+        Kernel.delay(strand: "strand1", source: "JobsMigrator::StrandBlocker").sleep(0.1)
 
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 3
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 3
       end
 
       shard1.update!(block_stranded: false)
       described_class.unblock_strands(shard1)
       activate_target_shard do
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 2
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 2
       end
     end
 
-    it 'should not unblock stranded jobs when a job within that strand already has next_in_strand=true' do
+    it "should not unblock stranded jobs when a job within that strand already has next_in_strand=true" do
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        Kernel.delay(strand: 'strand1').sleep(0.1)
-        Kernel.delay(strand: 'strand1').sleep(0.1)
-        Kernel.delay(strand: 'strand2').sleep(0.2)
+        Kernel.delay(strand: "strand1").sleep(0.1)
+        Kernel.delay(strand: "strand1").sleep(0.1)
+        Kernel.delay(strand: "strand2").sleep(0.2)
 
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 3
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 3
       end
 
       shard1.update!(block_stranded: false)
 
       activate_target_shard do
-        Delayed::Job.where(strand: 'strand1').first.update!(next_in_strand: true)
+        Delayed::Job.where(strand: "strand1").first.update!(next_in_strand: true)
       end
 
       described_class.unblock_strands(shard1)
       activate_target_shard do
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 1
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 1
       end
     end
 
-    it 'should unblock strandless singletons when block_stranded becomes false' do
+    it "should unblock strandless singletons when block_stranded becomes false" do
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        Kernel.delay(singleton: 'singleton1').sleep(0.1)
-        Kernel.delay(singleton: 'singleton2').sleep(0.2)
+        Kernel.delay(singleton: "singleton1").sleep(0.1)
+        Kernel.delay(singleton: "singleton2").sleep(0.2)
 
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 2
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 2
       end
 
       described_class.unblock_strands(shard1)
       activate_target_shard do
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 2
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 2
       end
 
       shard1.update!(block_stranded: false)
       described_class.unblock_strands(shard1)
       activate_target_shard do
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 0
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 0
       end
     end
 
-    it 'should not unblock strandless singletons when a strand blocker job exists' do
+    it "should not unblock strandless singletons when a strand blocker job exists" do
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        Kernel.delay(locked_by: 'w1', singleton: 'singleton1', source: 'JobsMigrator::StrandBlocker').sleep(0.1)
-        Kernel.delay(singleton: 'singleton1').sleep(0.1)
-        Kernel.delay(singleton: 'singleton2').sleep(0.2)
+        Kernel.delay(locked_by: "w1", singleton: "singleton1", source: "JobsMigrator::StrandBlocker").sleep(0.1)
+        Kernel.delay(singleton: "singleton1").sleep(0.1)
+        Kernel.delay(singleton: "singleton2").sleep(0.2)
 
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 3
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 3
       end
 
       shard1.update!(block_stranded: false)
       described_class.unblock_strands(shard1)
       activate_target_shard do
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 2
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 2
       end
     end
 
-    it 'should not unblock strandless singletons when another singleton already has next_in_strand=true' do
+    it "should not unblock strandless singletons when another singleton already has next_in_strand=true" do
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        Kernel.delay(singleton: 'singleton1').sleep(0.1)
-        Kernel.delay(singleton: 'singleton2').sleep(0.1)
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 2
+        Kernel.delay(singleton: "singleton1").sleep(0.1)
+        Kernel.delay(singleton: "singleton2").sleep(0.1)
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 2
       end
 
       shard1.update!(block_stranded: false)
 
       activate_target_shard do
-        Delayed::Job.where(singleton: 'singleton1').first.update!(locked_by: 'w1', next_in_strand: true)
-        Kernel.delay(singleton: 'singleton1').sleep(0.1)
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 2
+        Delayed::Job.where(singleton: "singleton1").first.update!(locked_by: "w1", next_in_strand: true)
+        Kernel.delay(singleton: "singleton1").sleep(0.1)
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 2
       end
 
       described_class.unblock_strands(shard1)
       activate_target_shard do
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 1
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 1
       end
     end
 
-    it 'does not unblock jobs where jobs are held' do
+    it "does not unblock jobs where jobs are held" do
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        Kernel.delay(singleton: 'singleton1').sleep(0.1)
-        Kernel.delay(singleton: 'singleton2').sleep(0.1)
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 2
+        Kernel.delay(singleton: "singleton1").sleep(0.1)
+        Kernel.delay(singleton: "singleton2").sleep(0.1)
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 2
       end
 
       shard1.update!(block_stranded: false, jobs_held: true)
       described_class.unblock_strands(shard1)
 
       activate_target_shard do
-        expect(Delayed::Job.where(next_in_strand: 'f').count).to eq 2
+        expect(Delayed::Job.where(next_in_strand: "f").count).to eq 2
       end
     end
   end
 
-  describe 'unblock_strand!' do
-    it 'lists blocked strands' do
+  describe "unblock_strand!" do
+    it "lists blocked strands" do
       activate_target_shard do
-        Kernel.delay(strand: 'strand1').sleep(0.1)
+        Kernel.delay(strand: "strand1").sleep(0.1)
       end
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        Kernel.delay(strand: 'strand2').sleep(0.1)
-        expect(described_class.blocked_strands.pluck(:strand)).to eq(['strand2'])
+        Kernel.delay(strand: "strand2").sleep(0.1)
+        expect(described_class.blocked_strands.pluck(:strand)).to eq(["strand2"])
       end
     end
 
-    it 'unblocks a strand' do
+    it "unblocks a strand" do
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        2.times { Kernel.delay(strand: 'strand1').sleep(0.1) }
+        2.times { Kernel.delay(strand: "strand1").sleep(0.1) }
       end
       shard1.update!(block_stranded: false)
 
       activate_target_shard do
-        count = described_class.unblock_strand!('strand1')
+        count = described_class.unblock_strand!("strand1")
         expect(count).to eq 1
-        expect(Delayed::Job.where(strand: 'strand1', next_in_strand: true).count).to eq 1
+        expect(Delayed::Job.where(strand: "strand1", next_in_strand: true).count).to eq 1
       end
     end
 
-    it 'unlocks multiple jobs if max_concurrent is greater than 1' do
+    it "unlocks multiple jobs if max_concurrent is greater than 1" do
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        3.times { Kernel.delay(strand: 'strand1', max_concurrent: 2).sleep(0.1) }
+        3.times { Kernel.delay(strand: "strand1", max_concurrent: 2).sleep(0.1) }
       end
       shard1.update!(block_stranded: false)
 
       activate_target_shard do
-        count = described_class.unblock_strand!('strand1')
+        count = described_class.unblock_strand!("strand1")
         expect(count).to eq 2
-        expect(Delayed::Job.where(strand: 'strand1', next_in_strand: true).count).to eq 2
+        expect(Delayed::Job.where(strand: "strand1", next_in_strand: true).count).to eq 2
       end
     end
 
     it "returns 0 if the strand isn't blocked" do
       activate_target_shard do
-        2.times { Kernel.delay(strand: 'strand1').sleep(0.1) }
+        2.times { Kernel.delay(strand: "strand1").sleep(0.1) }
 
-        count = described_class.unblock_strand!('strand1')
+        count = described_class.unblock_strand!("strand1")
         expect(count).to eq 0
       end
     end
 
-    it 'raises an exception if a blocker job exists' do
+    it "raises an exception if a blocker job exists" do
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        2.times { Kernel.delay(strand: 'strand1').sleep(0.1) }
-        Kernel.delay(strand: 'strand1', source: 'JobsMigrator::StrandBlocker').sleep(0.1)
+        2.times { Kernel.delay(strand: "strand1").sleep(0.1) }
+        Kernel.delay(strand: "strand1", source: "JobsMigrator::StrandBlocker").sleep(0.1)
       end
       shard1.update!(block_stranded: false)
 
       activate_target_shard do
         expect do
-          described_class.unblock_strand!('strand1')
+          described_class.unblock_strand!("strand1")
         end.to raise_error(SwitchmanInstJobs::JobsBlockedError)
       end
     end
   end
 
-  describe 'unblock_singleton!' do
-    it 'lists blocked singletons' do
+  describe "unblock_singleton!" do
+    it "lists blocked singletons" do
       activate_target_shard do
-        Kernel.delay(singleton: 'singleton1').sleep(0.1)
+        Kernel.delay(singleton: "singleton1").sleep(0.1)
       end
       shard1.update!(block_stranded: true)
       activate_target_shard do
-        Kernel.delay(singleton: 'singleton2').sleep(0.1)
-        expect(described_class.blocked_singletons.pluck(:singleton)).to eq(['singleton2'])
+        Kernel.delay(singleton: "singleton2").sleep(0.1)
+        expect(described_class.blocked_singletons.pluck(:singleton)).to eq(["singleton2"])
       end
     end
 
-    it 'unblocks a singleton' do
+    it "unblocks a singleton" do
       activate_target_shard do
         shard1.update!(block_stranded: true)
-        Kernel.delay(singleton: 'singleton1').sleep(0.1)
+        Kernel.delay(singleton: "singleton1").sleep(0.1)
       end
       shard1.update!(block_stranded: false)
 
       activate_target_shard do
-        count = described_class.unblock_singleton!('singleton1')
+        count = described_class.unblock_singleton!("singleton1")
         expect(count).to eq 1
-        expect(Delayed::Job.find_by(singleton: 'singleton1').next_in_strand).to eq true
+        expect(Delayed::Job.find_by(singleton: "singleton1").next_in_strand).to eq true
       end
     end
 
     it "returns 0 if the singleton isn't blocked" do
       activate_target_shard do
-        Kernel.delay(singleton: 'singleton1').sleep(0.1)
-        count = described_class.unblock_singleton!('singleton1')
+        Kernel.delay(singleton: "singleton1").sleep(0.1)
+        count = described_class.unblock_singleton!("singleton1")
         expect(count).to eq 0
       end
     end
 
-    it 'raises an exception if jobs are held' do
+    it "raises an exception if jobs are held" do
       activate_target_shard do
         shard1.update!(block_stranded: true)
-        Kernel.delay(singleton: 'singleton1').sleep(0.1)
+        Kernel.delay(singleton: "singleton1").sleep(0.1)
       end
       shard1.update!(block_stranded: false, jobs_held: true)
 
       activate_target_shard do
         expect do
-          described_class.unblock_singleton!('singleton1')
+          described_class.unblock_singleton!("singleton1")
         end.to raise_error(SwitchmanInstJobs::JobsBlockedError)
       end
     end
   end
 
-  describe 'blocked_job_count' do
-    it 'counts blocked jobs across shards, singletons, and unstranded jobs' do
+  describe "blocked_job_count" do
+    it "counts blocked jobs across shards, singletons, and unstranded jobs" do
       activate_target_shard do
         shard1.update(block_stranded: true)
-        Kernel.delay(singleton: 'foo').sleep(0.1)
-        3.times { Kernel.delay(strand: 'baz').sleep(0.1) }
+        Kernel.delay(singleton: "foo").sleep(0.1)
+        3.times { Kernel.delay(strand: "baz").sleep(0.1) }
         2.times { Kernel.delay(next_in_strand: false).sleep(0.1) }
         expect(described_class.blocked_job_count).to eq 6
       end
@@ -313,14 +315,14 @@ describe SwitchmanInstJobs::JobsMigrator do
 
   it "should move strand'd jobs, and not non-strand'd jobs" do
     activate_source_shard do
-      5.times { Kernel.delay(strand: 'strand1').sleep(0.1) }
-      6.times { Kernel.delay(strand: 'strand2').sleep(0.2) }
+      5.times { Kernel.delay(strand: "strand1").sleep(0.1) }
+      6.times { Kernel.delay(strand: "strand2").sleep(0.2) }
       7.times { Kernel.delay.sleep(0.3) }
     end
     4.times { Kernel.delay.sleep(0.4) }
 
     activate_target_shard do
-      3.times { Kernel.delay(strand: 'strand1').sleep(0.5) }
+      3.times { Kernel.delay(strand: "strand1").sleep(0.5) }
       expect(Delayed::Job.count).to eq 3
     end
 
@@ -337,7 +339,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       # 5 + 6 + 3 + 7
       expect(Delayed::Job.count).to eq 21
       # 0.1 jobs come before 0.5 jobs
-      strand = Delayed::Job.where(strand: 'strand1')
+      strand = Delayed::Job.where(strand: "strand1")
       first_job = strand.next_in_strand_order.first
       expect(first_job.payload_object.args).to eq [0.1]
       # when the current running job on other shard finishes it will set next_in_strand
@@ -346,10 +348,10 @@ describe SwitchmanInstJobs::JobsMigrator do
     end
   end
 
-  it 'should move strandless singleton jobs' do
+  it "should move strandless singleton jobs" do
     activate_source_shard do
-      Kernel.delay(singleton: 'singleton1').sleep(0.1)
-      Kernel.delay(singleton: 'singleton2').sleep(0.2)
+      Kernel.delay(singleton: "singleton1").sleep(0.1)
+      Kernel.delay(singleton: "singleton2").sleep(0.2)
     end
 
     shard1.delayed_jobs_shard_id = Switchman::Shard.default.id
@@ -366,13 +368,13 @@ describe SwitchmanInstJobs::JobsMigrator do
     end
   end
 
-  it 'should not overwrite strandless singleton jobs on the target shard' do
+  it "should not overwrite strandless singleton jobs on the target shard" do
     activate_source_shard do
-      Kernel.delay(singleton: 'singleton1').sleep(0.1)
+      Kernel.delay(singleton: "singleton1").sleep(0.1)
     end
 
     activate_target_shard do
-      Kernel.delay(singleton: 'singleton1').sleep(0.2)
+      Kernel.delay(singleton: "singleton1").sleep(0.2)
     end
 
     shard1.delayed_jobs_shard_id = Switchman::Shard.default.id
@@ -389,39 +391,39 @@ describe SwitchmanInstJobs::JobsMigrator do
     end
   end
 
-  it 'should set block_stranded to false when migration is done even if no jobs moved' do
+  it "should set block_stranded to false when migration is done even if no jobs moved" do
     described_class.migrate_shards({ shard1 => shard1 })
     expect(shard1.reload.block_stranded).to be_falsy
   end
 
-  it 'should create a blocker strand if a job is currently running' do
+  it "should create a blocker strand if a job is currently running" do
     activate_source_shard do
-      5.times { Kernel.delay(strand: 'strand1').sleep(0.1) }
+      5.times { Kernel.delay(strand: "strand1").sleep(0.1) }
     end
-    Delayed::Job.where(shard_id: shard1.id, strand: 'strand1').next_in_strand_order.first.
-      update(locked_by: 'specs', locked_at: DateTime.now)
+    Delayed::Job.where(shard_id: shard1.id, strand: "strand1").next_in_strand_order.first
+                .update(locked_by: "specs", locked_at: DateTime.now)
 
-    expect(Delayed::Job.where(strand: 'strand1').count).to eq 5
+    expect(Delayed::Job.where(strand: "strand1").count).to eq 5
     described_class.run
     # The currently running job is kept
     expect(Delayed::Job.count).to eq 1
 
     activate_target_shard do
-      strand = Delayed::Job.where(strand: 'strand1')
+      strand = Delayed::Job.where(strand: "strand1")
       # There should be the 4 non-running jobs + 1 blocker
       expect(strand.count).to eq 5
       first_job = strand.next_in_strand_order.first
-      expect(first_job.source).to eq 'JobsMigrator::StrandBlocker'
+      expect(first_job.source).to eq "JobsMigrator::StrandBlocker"
       # when the current running job on other shard finishes it will set next_in_strand
       expect(first_job.next_in_strand).to be_falsy
       expect(strand.where(next_in_strand: true).count).to eq 0
     end
   end
 
-  it 'should create a blocker singleton if a strandless singleton is currently running' do
+  it "should create a blocker singleton if a strandless singleton is currently running" do
     activate_source_shard do
-      Kernel.delay(locked_at: DateTime.now, locked_by: 'w1', singleton: 'singleton1').sleep(0.1)
-      Kernel.delay(singleton: 'singleton1').sleep(0.1)
+      Kernel.delay(locked_at: DateTime.now, locked_by: "w1", singleton: "singleton1").sleep(0.1)
+      Kernel.delay(singleton: "singleton1").sleep(0.1)
     end
 
     expect(Delayed::Job.count).to eq 2
@@ -431,10 +433,10 @@ describe SwitchmanInstJobs::JobsMigrator do
 
     activate_target_shard do
       expect(
-        Delayed::Job.where('locked_at IS NOT NULL AND locked_by IS NOT NULL').where(singleton: 'singleton1').count
+        Delayed::Job.where("locked_at IS NOT NULL AND locked_by IS NOT NULL").where(singleton: "singleton1").count
       ).to eq 1
       expect(
-        Delayed::Job.where('locked_at IS NULL AND locked_by IS NULL').where(singleton: 'singleton1').count
+        Delayed::Job.where("locked_at IS NULL AND locked_by IS NULL").where(singleton: "singleton1").count
       ).to eq 1
 
       # the blocker job + previously queued job
@@ -442,86 +444,86 @@ describe SwitchmanInstJobs::JobsMigrator do
     end
   end
 
-  it 'should handle pre-existing (or migrated earlier in the run) singleton jobs gracefully' do
+  it "should handle pre-existing (or migrated earlier in the run) singleton jobs gracefully" do
     activate_source_shard do
-      Kernel.delay(singleton: 'singleton1').sleep(0.1)
+      Kernel.delay(singleton: "singleton1").sleep(0.1)
     end
     activate_target_shard do
-      Kernel.delay(singleton: 'singleton1').sleep(0.1)
+      Kernel.delay(singleton: "singleton1").sleep(0.1)
     end
 
-    expect(Delayed::Job.where(singleton: 'singleton1').count).to eq 1
+    expect(Delayed::Job.where(singleton: "singleton1").count).to eq 1
     activate_target_shard do
-      expect(Delayed::Job.where(singleton: 'singleton1').count).to eq 1
+      expect(Delayed::Job.where(singleton: "singleton1").count).to eq 1
     end
     described_class.run
     # The singleton was dropped from this shard
-    expect(Delayed::Job.where(singleton: 'singleton1').count).to eq 0
+    expect(Delayed::Job.where(singleton: "singleton1").count).to eq 0
 
     # There is still one singleton on the new shard
     activate_target_shard do
-      expect(Delayed::Job.where(singleton: 'singleton1').count).to eq 1
+      expect(Delayed::Job.where(singleton: "singleton1").count).to eq 1
     end
   end
 
-  context 'before_move_callbacks' do
-    it 'Should pass the original job record to a callback' do
+  context "before_move_callbacks" do
+    it "Should pass the original job record to a callback" do
       @old_job = nil
       # rubocop:todo Lint/UnusedBlockArgument
       described_class.add_before_move_callback(->(old_job:, new_job:) { @old_job = old_job })
       # rubocop:enable Lint/UnusedBlockArgument
       activate_source_shard do
-        Kernel.delay(strand: 'strand', ignore_transaction: true).sleep(0)
+        Kernel.delay(strand: "strand", ignore_transaction: true).sleep(0)
       end
       described_class.run
       expect(@old_job.shard).to eq(Switchman::Shard.default)
       described_class.clear_callbacks!
     end
 
-    it 'Should pass the new job record to a callback' do
+    it "Should pass the new job record to a callback" do
       @new_job = nil
       # rubocop:todo Lint/UnusedBlockArgument
       described_class.add_before_move_callback(->(old_job:, new_job:) { @new_job = new_job })
       # rubocop:enable Lint/UnusedBlockArgument
       activate_source_shard do
-        Kernel.delay(strand: 'strand', ignore_transaction: true).sleep(0)
+        Kernel.delay(strand: "strand", ignore_transaction: true).sleep(0)
       end
       described_class.run
       expect(@new_job.shard).to eq(shard1)
       described_class.clear_callbacks!
     end
 
-    it 'Should call before the new job record is saved' do
+    it "Should call before the new job record is saved" do
       @new_job = nil
       # rubocop:todo Lint/UnusedBlockArgument
       described_class.add_before_move_callback(->(old_job:, new_job:) { @new_job = new_job })
       # rubocop:enable Lint/UnusedBlockArgument
       activate_source_shard do
-        Kernel.delay(strand: 'strand', ignore_transaction: true).sleep(0)
+        Kernel.delay(strand: "strand", ignore_transaction: true).sleep(0)
       end
       described_class.run
       expect(@new_job.new_record?).to be true
     end
   end
 
-  context 'validation_callbacks' do
-    it 'Should abort moving if validation fails' do
+  context "validation_callbacks" do
+    it "Should abort moving if validation fails" do
       # rubocop:todo Lint/UnusedBlockArgument
-      described_class.add_validation_callback(->(shard:, target_shard:) { raise 'bad move' })
+      described_class.add_validation_callback(->(shard:, target_shard:) { raise "bad move" })
       # rubocop:enable Lint/UnusedBlockArgument
       activate_source_shard do
-        Kernel.delay(strand: 'strand', ignore_transaction: true).sleep(0)
+        Kernel.delay(strand: "strand", ignore_transaction: true).sleep(0)
       end
-      expect { described_class.migrate_shards({ shard1 => shard1 }) }.to raise_error('bad move')
+      expect { described_class.migrate_shards({ shard1 => shard1 }) }.to raise_error("bad move")
       described_class.clear_callbacks!
     end
 
-    it 'Should succeed moving if validation succeeds' do
+    it "Should succeed moving if validation succeeds" do
       # rubocop:todo Lint/UnusedBlockArgument
-      described_class.add_validation_callback(->(shard:, target_shard:) { 'noop' })
+      described_class.add_validation_callback(->(shard:, target_shard:) { "noop" })
       # rubocop:enable Lint/UnusedBlockArgument
       activate_source_shard do
-        Kernel.delay(strand: 'strand', ignore_transaction: true).sleep(0)
+        Kernel.delay(strand: "strand", ignore_transaction: true).sleep(0)
       end
       expect { described_class.migrate_shards({ shard1 => shard1 }) }.not_to raise_error
       described_class.clear_callbacks!

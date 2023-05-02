@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 class CreateDelayedJobs < ActiveRecord::Migration[4.2]
   def up
-    unless connection.adapter_name == 'PostgreSQL'
+    unless connection.adapter_name == "PostgreSQL"
       raise("#{connection.adapter_name} is not supported for delayed jobs queue")
     end
 
@@ -28,8 +30,8 @@ class CreateDelayedJobs < ActiveRecord::Migration[4.2]
       table.timestamps
     end
 
-    add_index :delayed_jobs, %i[priority run_at], name: 'delayed_jobs_priority'
-    add_index :delayed_jobs, [:queue], name: 'delayed_jobs_queue'
+    add_index :delayed_jobs, %i[priority run_at], name: "delayed_jobs_priority"
+    add_index :delayed_jobs, [:queue], name: "delayed_jobs_queue"
   end
 
   def down

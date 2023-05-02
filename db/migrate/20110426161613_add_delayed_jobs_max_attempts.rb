@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddDelayedJobsMaxAttempts < ActiveRecord::Migration[4.2]
   def up
     add_column :delayed_jobs, :max_attempts, :integer

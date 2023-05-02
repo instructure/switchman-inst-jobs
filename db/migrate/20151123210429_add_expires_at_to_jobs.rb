@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddExpiresAtToJobs < ActiveRecord::Migration[4.2]
   def up
     add_column :delayed_jobs, :expires_at, :datetime

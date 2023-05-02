@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 module SwitchmanInstJobs
   module Switchman
     module DatabaseServer
       def delayed_jobs_shard(shard = nil)
-        return shard if config[:delayed_jobs_shard] == 'self'
+        return shard if config[:delayed_jobs_shard] == "self"
 
         dj_shard =
           config[:delayed_jobs_shard] &&

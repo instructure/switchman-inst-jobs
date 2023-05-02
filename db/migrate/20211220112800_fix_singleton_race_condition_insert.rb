@@ -5,7 +5,7 @@ class FixSingletonRaceConditionInsert < ActiveRecord::Migration[5.2]
     reversible do |direction|
       direction.up do
         execute(<<~SQL)
-          CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_before_insert_row_tr_fn')} () RETURNS trigger AS $$
+          CREATE OR REPLACE FUNCTION #{connection.quote_table_name("delayed_jobs_before_insert_row_tr_fn")} () RETURNS trigger AS $$
           BEGIN
             IF NEW.strand IS NOT NULL THEN
               PERFORM pg_advisory_xact_lock(half_md5_as_bigint(NEW.strand));
@@ -31,7 +31,7 @@ class FixSingletonRaceConditionInsert < ActiveRecord::Migration[5.2]
       end
       direction.down do
         execute(<<~SQL)
-          CREATE OR REPLACE FUNCTION #{connection.quote_table_name('delayed_jobs_before_insert_row_tr_fn')} () RETURNS trigger AS $$
+          CREATE OR REPLACE FUNCTION #{connection.quote_table_name("delayed_jobs_before_insert_row_tr_fn")} () RETURNS trigger AS $$
           BEGIN
             IF NEW.strand IS NOT NULL THEN
               PERFORM pg_advisory_xact_lock(half_md5_as_bigint(NEW.strand));

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module SwitchmanInstJobs
   module Switchman
     module Shard
@@ -28,9 +30,9 @@ module SwitchmanInstJobs
         return unless wait
 
         delayed_jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
-          while ::Delayed::Job.where(shard_id: id).
-              where.not(locked_at: nil).
-              where.not(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY).exists?
+          while ::Delayed::Job.where(shard_id: id)
+                              .where.not(locked_at: nil)
+                              .where.not(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY).exists?
             sleep 10
             lock_jobs_for_hold
           end
@@ -44,18 +46,18 @@ module SwitchmanInstJobs
           # Wait a little over the 60 second in-process shard cache clearing
           # threshold to ensure that all new jobs are now being enqueued
           # unlocked
-          Rails.logger.debug('Waiting for caches to clear')
+          Rails.logger.debug("Waiting for caches to clear")
           sleep(65)
         end
         delayed_jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
-          ::Delayed::Job.where(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY, shard_id: id).
-            in_batches(of: 10_000).
-            update_all(
-              locked_by: nil,
-              locked_at: nil,
-              attempts: 0,
-              failed_at: nil
-            )
+          ::Delayed::Job.where(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY, shard_id: id)
+                        .in_batches(of: 10_000)
+                        .update_all(
+                          locked_by: nil,
+                          locked_at: nil,
+                          attempts: 0,
+                          failed_at: nil
+                        )
         end
       end
 
@@ -105,22 +107,24 @@ module SwitchmanInstJobs
         end
 
         def delayed_jobs_shards
-          return none unless ::Switchman::Shard.columns_hash.key?('delayed_jobs_shard_id')
+          return none unless ::Switchman::Shard.columns_hash.key?("delayed_jobs_shard_id")
 
-          scope = ::Switchman::Shard.unscoped.
-            where(id: ::Switchman::Shard.unscoped.distinct.where.not(delayed_jobs_shard_id: nil).
-            select(:delayed_jobs_shard_id))
+          scope = ::Switchman::Shard.unscoped
+                                    .where(id: ::Switchman::Shard.unscoped
+                                                                 .distinct
+                                                                 .where.not(delayed_jobs_shard_id: nil)
+                                    .select(:delayed_jobs_shard_id))
           db_jobs_shards = ::Switchman::DatabaseServer.all.map { |db| db.config[:delayed_jobs_shard] }.uniq
           db_jobs_shards.delete(nil)
-          has_self = db_jobs_shards.delete('self')
+          has_self = db_jobs_shards.delete("self")
           scope = scope.or(::Switchman::Shard.unscoped.where(id: db_jobs_shards)) unless db_jobs_shards.empty?
 
           if has_self
-            self_dbs = ::Switchman::DatabaseServer.all.
-              select { |db| db.config[:delayed_jobs_shard] == 'self' }.map(&:id)
-            scope = scope.or(::Switchman::Shard.unscoped.
-              where(id: ::Switchman::Shard.unscoped.where(delayed_jobs_shard_id: nil, database_server_id: self_dbs).
-              select(:id)))
+            self_dbs = ::Switchman::DatabaseServer.all
+                                                  .select { |db| db.config[:delayed_jobs_shard] == "self" }.map(&:id)
+            scope = scope.or(::Switchman::Shard.unscoped
+              .where(id: ::Switchman::Shard.unscoped.where(delayed_jobs_shard_id: nil, database_server_id: self_dbs)
+              .select(:id)))
           end
           @jobs_scope_empty = !scope.exists? unless instance_variable_defined?(:@jobs_scope_empty)
           return ::Switchman::Shard.where(id: ::Switchman::Shard.default.id) if @jobs_scope_empty

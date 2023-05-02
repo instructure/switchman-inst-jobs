@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # This migration comes from switchman (originally 20161206323434)
 class AddBackDefaultStringLimitsSwitchman < ActiveRecord::Migration[4.2]
   def up

@@ -1,9 +1,14 @@
-require: rubocop-rails
+require:
+ - rubocop-rails
+ - rubocop-rake
+
+inherit_gem:
+  rubocop-inst:
+  - rubocop.yml
 
 AllCops:
   TargetRailsVersion: 6.1
   TargetRubyVersion: 2.7
-  NewCops: enable
   Exclude:
     - 'bin/*'
     - 'gemfiles/*'
@@ -14,21 +19,6 @@ Layout/LineLength:
   Exclude:
     - db/migrate/*.rb
 
-Layout/DotPosition:
-  EnforcedStyle: trailing
-
-Layout/MultilineMethodCallIndentation:
-  EnforcedStyle: indented # Default: aligned
-
-Layout/ParameterAlignment:
-  EnforcedStyle: with_fixed_indentation # Default: with_first_parameter
-
-Lint/UnusedMethodArgument:
-  AllowUnusedKeywordArguments: true
-
-Metrics:
-  Enabled: false
-
 Naming/FileName:
   Exclude:
     - lib/switchman-inst-jobs.rb
@@ -36,7 +26,6 @@ Naming/FileName:
 
 Rails/SkipsModelValidations:
   Enabled: false
-
 Rails/SquishedSQLHeredocs:
   Enabled: false
 
@@ -45,9 +34,6 @@ Style/Documentation:
   # Classes with no body and namespace modules are exempt from the check.
   # Namespace modules are modules that have nothing in their bodies except
   # classes or other modules.
-  Enabled: false
-
-Style/FrozenStringLiteralComment:
   Enabled: false
 
 Style/GuardClause:

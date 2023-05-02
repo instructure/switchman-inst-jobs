@@ -1,1 +1,3 @@
-require 'switchman_inst_jobs'
+# frozen_string_literal: true
+
+require "switchman_inst_jobs"
