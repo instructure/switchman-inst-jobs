@@ -150,7 +150,7 @@ GEM
       parser (>= 3.2.1.0)
     rubocop-capybara (2.18.0)
       rubocop (~> 1.41)
-    rubocop-inst (1.0.1)
+    rubocop-inst (1.0.2)
       rubocop (~> 1.50)
       rubocop-performance (~> 1.17)
     rubocop-performance (1.17.1)

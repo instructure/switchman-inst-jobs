@@ -4,7 +4,7 @@ describe SwitchmanInstJobs::NewRelic, order: :defined do
   it "should not change anything if new relic is not availible" do
     described_class.enable
 
-    expect(Delayed::Worker.new).to_not respond_to(:install_newrelic_job_tracer)
+    expect(Delayed::Worker.new).not_to respond_to(:install_newrelic_job_tracer)
   end
 
   it "should prepend a new relic installer if new relic is availible" do

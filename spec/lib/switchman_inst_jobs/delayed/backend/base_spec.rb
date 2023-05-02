@@ -42,7 +42,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
 
       Kernel.delay(strand: "strand78").sleep(0.1)
       expect(Delayed::Job.where(strand: "strand78").count).to eq 1
-      expect(Delayed::Job.where(strand: "strand78").first.next_in_strand).to eq true
+      expect(Delayed::Job.where(strand: "strand78").first.next_in_strand).to be true
     end
 
     it "should enqueue with next_in_strand=false if the strand is empty and block_stranded is true" do
@@ -51,7 +51,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
 
       Kernel.delay(strand: "strand79").sleep(0.1)
       expect(Delayed::Job.where(strand: "strand79").count).to eq 1
-      expect(Delayed::Job.where(strand: "strand79").first.next_in_strand).to eq false
+      expect(Delayed::Job.where(strand: "strand79").first.next_in_strand).to be false
 
       Switchman::Shard.current.block_stranded = false
       Switchman::Shard.current.save!
@@ -93,8 +93,8 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
       shard.activate do
         job = "string".delay(ignore_transaction: true).size
       end
-      expect(job.locked_by).to_not be_nil
-      expect(job.locked_at).to_not be_nil
+      expect(job.locked_by).not_to be_nil
+      expect(job.locked_at).not_to be_nil
     end
   end
 

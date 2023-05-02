@@ -31,7 +31,7 @@ describe SwitchmanInstJobs::Engine do
     end
 
     context "non_transactional", use_transactional_fixtures: false do
-      after(:each) do
+      after do
         # we're disabling automatic transaction wrapping, so ensure we clean up properly
         shard1.activate(Delayed::Backend::ActiveRecord::AbstractJob) do
           Delayed::Job.delete_all
@@ -73,14 +73,14 @@ describe SwitchmanInstJobs::Engine do
 
         shard2.activate(Delayed::Backend::ActiveRecord::AbstractJob) do
           expect(Delayed::Job.first.source).to eq "JobsMigrator::StrandBlocker"
-          expect(Delayed::Job.first.next_in_strand).to eq false
+          expect(Delayed::Job.first.next_in_strand).to be false
         end
 
         Delayed::Worker.new(queue: "test1", worker_max_job_count: 1, shard: shard1.id).run
 
         shard2.activate(Delayed::Backend::ActiveRecord::AbstractJob) do
           expect(Delayed::Job.first.source).not_to eq "JobsMigrator::StrandBlocker"
-          expect(Delayed::Job.first.next_in_strand).to eq true
+          expect(Delayed::Job.first.next_in_strand).to be true
         end
       end
 
@@ -112,14 +112,14 @@ describe SwitchmanInstJobs::Engine do
 
         shard2.activate(Delayed::Backend::ActiveRecord::AbstractJob) do
           expect(Delayed::Job.first.source).to eq "JobsMigrator::StrandBlocker"
-          expect(Delayed::Job.first.next_in_strand).to eq false
+          expect(Delayed::Job.first.next_in_strand).to be false
         end
 
         Delayed::Worker.new(queue: "test1", worker_max_job_count: 1, shard: shard1.id).run
 
         shard2.activate(Delayed::Backend::ActiveRecord::AbstractJob) do
           expect(Delayed::Job.first.source).not_to eq "JobsMigrator::StrandBlocker"
-          expect(Delayed::Job.first.next_in_strand).to eq true
+          expect(Delayed::Job.first.next_in_strand).to be true
         end
       end
 
@@ -145,13 +145,13 @@ describe SwitchmanInstJobs::Engine do
         Switchman::Shard.current.save!
 
         shard2.activate(Delayed::Backend::ActiveRecord::AbstractJob) do
-          expect(Delayed::Job.first.next_in_strand).to eq false
+          expect(Delayed::Job.first.next_in_strand).to be false
         end
 
         Delayed::Worker.new(queue: "test1", worker_max_job_count: 1, shard: shard1.id).run
 
         shard2.activate(Delayed::Backend::ActiveRecord::AbstractJob) do
-          expect(Delayed::Job.first.next_in_strand).to eq true
+          expect(Delayed::Job.first.next_in_strand).to be true
         end
       end
 
@@ -178,13 +178,13 @@ describe SwitchmanInstJobs::Engine do
         Switchman::Shard.current.save!
 
         shard2.activate(Delayed::Backend::ActiveRecord::AbstractJob) do
-          expect(Delayed::Job.first.next_in_strand).to eq false
+          expect(Delayed::Job.first.next_in_strand).to be false
         end
 
         Delayed::Worker.new(queue: "test1", worker_max_job_count: 1, shard: shard1.id).run
 
         shard2.activate(Delayed::Backend::ActiveRecord::AbstractJob) do
-          expect(Delayed::Job.first.next_in_strand).to eq true
+          expect(Delayed::Job.first.next_in_strand).to be true
         end
       end
     end

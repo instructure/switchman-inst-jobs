@@ -5,6 +5,7 @@ require:
 inherit_gem:
   rubocop-inst:
   - rubocop.yml
+  - rubocop-rspec.yml
 
 AllCops:
   TargetRailsVersion: 6.1
@@ -27,6 +28,17 @@ Naming/FileName:
 Rails/SkipsModelValidations:
   Enabled: false
 Rails/SquishedSQLHeredocs:
+  Enabled: false
+
+RSpec/AnyInstance:
+  Enabled: false
+RSpec/InstanceVariable:
+  Enabled: false
+RSpec/IndexedLet:
+  Enabled: false
+RSpec/ContextWording:
+  Enabled: false
+RSpec/VerifiedDoubles:
   Enabled: false
 
 Style/Documentation:

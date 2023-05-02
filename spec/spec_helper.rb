@@ -47,7 +47,7 @@ RSpec.configure do |config|
 
   config.use_transactional_fixtures = true
 
-  config.around(:each) do |example|
+  config.around do |example|
     if Switchman::Shard.instance_variable_defined?(:@jobs_scope_empty)
       Switchman::Shard.remove_instance_variable(:@jobs_scope_empty)
     end

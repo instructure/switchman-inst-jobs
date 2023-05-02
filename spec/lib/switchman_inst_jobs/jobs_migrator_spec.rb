@@ -274,7 +274,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       activate_target_shard do
         count = described_class.unblock_singleton!("singleton1")
         expect(count).to eq 1
-        expect(Delayed::Job.find_by(singleton: "singleton1").next_in_strand).to eq true
+        expect(Delayed::Job.find_by(singleton: "singleton1").next_in_strand).to be true
       end
     end
 
