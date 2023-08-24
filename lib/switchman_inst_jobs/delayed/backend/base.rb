@@ -94,6 +94,12 @@ module SwitchmanInstJobs
           current_shard.activate { super }
         end
 
+        def invoke_payload_object_cb(...)
+          raise ShardNotFoundError, shard_id unless current_shard
+
+          current_shard.activate { super }
+        end
+
         def deserialize(source)
           raise ShardNotFoundError, shard_id unless current_shard
 

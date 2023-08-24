@@ -116,6 +116,43 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
     end
   end
 
+  describe "#invoke_payload_object_cb" do
+    let(:error_job) do
+      Class.new do
+        class << self
+          attr_accessor :cb_shard
+        end
+
+        def perform
+          raise
+        end
+
+        def on_failure(*)
+          self.class.cb_shard = Switchman::Shard.current
+        end
+
+        def on_permanent_failure(*)
+          self.class.cb_shard = Switchman::Shard.current
+        end
+      end
+    end
+
+    it "should activate the associated job shard when rescheduling" do
+      shard.activate { error_job.new.delay(ignore_transaction: true, on_failure: :on_failure).perform }.reschedule
+
+      expect(error_job.cb_shard.name).to eq(shard.name)
+    end
+
+    it "should activate the associated job shard upon a permanent failure" do
+      shard.activate do
+        error_job.new.delay(ignore_transaction: true,
+                            on_permanent_failure: :on_permanent_failure).perform
+      end.permanent_failure(nil)
+
+      expect(error_job.cb_shard.name).to eq(shard.name)
+    end
+  end
+
   describe "#deserialize" do
     it "wraps the aliased version of the deserialize method" do
       harness.shard_id = shard.id

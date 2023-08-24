@@ -12,12 +12,11 @@ describe SwitchmanInstJobs::Delayed::Worker::HealthCheck do
         .and_return([@shard1.id, Switchman::Shard.default.id])
       expect(Delayed::Settings).to receive(:worker_health_check_type).at_least(:once).and_return(:consul)
       health_checker = double(live_workers: [])
-      allow(Delayed::Worker::HealthCheck).to receive(:build).and_return(health_checker)
+      allow(Delayed::Worker::HealthCheck).to receive_messages(build: health_checker, attempt_advisory_lock: true)
       expect(Delayed::Job).to receive(:running_jobs).twice.and_return(Delayed::Job.none)
       expect(Delayed::Worker::HealthCheck).not_to receive(:delay)
       # these two shards share a database, and the test transaction will prevent the lock from being
       # release between shards. so just don't get one
-      allow(Delayed::Worker::HealthCheck).to receive(:attempt_advisory_lock).and_return(true)
       Delayed::Worker::HealthCheck.reschedule_abandoned_jobs
     end
   end
