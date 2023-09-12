@@ -28,7 +28,6 @@ Gem::Specification.new do |s|
   s.add_dependency "railties", ">= 6.1", "< 7.1"
   s.add_dependency "switchman", "~> 3.1"
 
-  s.add_development_dependency "appraisal", "~> 2.3.0"
   s.add_development_dependency "bundler"
   s.add_development_dependency "byebug"
   s.add_development_dependency "diplomat", "~> 2.5.1"

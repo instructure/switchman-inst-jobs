@@ -1,10 +1,10 @@
+/.bundle/
 /.byebug_history
 /coverage/
 /doc/
 /docker-compose.override.yml
 /log/
 /pkg/
-/spec/gemfiles/.bundle/
 /spec/dummy/log/
 /spec/dummy/tmp/
 /switchman-inst-jobs-*.gem

@@ -14,6 +14,8 @@ AllCops:
     - 'bin/*'
     - 'gemfiles/*'
 
+Bundler/DuplicatedGem:
+  Enabled: false
 
 Layout/LineLength:
   Max: 120 # Default: 80

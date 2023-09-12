@@ -27,9 +27,9 @@ pipeline {
             steps {
               // Allow postgres to initialize while the build runs
               sh 'docker-compose up -d postgres'
-              sh "docker-compose build --pull --build-arg RUBY_VERSION=${RUBY_VERSION} --build-arg BUNDLE_GEMFILE=gemfiles/activerecord_${RAILS_VERSION}.gemfile app"
-              sh 'docker-compose run --rm app bundle exec rake db:drop db:create db:migrate'
-              sh 'docker-compose run --rm app bundle exec rake'
+              sh "docker-compose build --pull --build-arg RUBY_VERSION=${RUBY_VERSION} --build-arg app"
+              sh "BUNDLE_LOCKFILE=activerecord-${RAILS_VERSION} docker-compose run --rm app bundle exec rake db:drop db:create db:migrate"
+              sh "BUNDLE_LOCKFILE=activerecord-${RAILS_VERSION} docker-compose run --rm app bundle exec rake"
             }
           }
         }
