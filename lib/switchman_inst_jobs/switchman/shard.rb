@@ -120,7 +120,7 @@ module SwitchmanInstJobs
           scope = scope.or(::Switchman::Shard.unscoped.where(id: db_jobs_shards)) unless db_jobs_shards.empty?
 
           if has_self
-            self_dbs = ::Switchman::DatabaseServer.all # rubocop:disable Rails/RedundantActiveRecordAllMethod
+            self_dbs = ::Switchman::DatabaseServer.all
                                                   .select { |db| db.config[:delayed_jobs_shard] == "self" }.map(&:id)
             scope = scope.or(::Switchman::Shard.unscoped
               .where(id: ::Switchman::Shard.unscoped.where(delayed_jobs_shard_id: nil, database_server_id: self_dbs)

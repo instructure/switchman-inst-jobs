@@ -15,11 +15,11 @@ pipeline {
         axes {
           axis {
             name 'RUBY_VERSION'
-            values '2.7', '3.0'
+            values '2.7', '3.0', '3.1', '3.2'
           }
           axis {
             name 'RAILS_VERSION'
-            values '6.1', '7.0'
+            values '6.1', '7.0', '7.1'
           }
         }
         stages {
