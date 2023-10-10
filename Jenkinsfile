@@ -18,8 +18,8 @@ pipeline {
             values '2.7', '3.0', '3.1', '3.2'
           }
           axis {
-            name 'RAILS_VERSION'
-            values '6.1', '7.0', '7.1'
+            name 'LOCKFILE'
+            values 'activerecord-6.1', 'activerecord-7.0', 'Gemfile.lock'
           }
         }
         stages {
@@ -28,8 +28,8 @@ pipeline {
               // Allow postgres to initialize while the build runs
               sh 'docker-compose up -d postgres'
               sh "docker-compose build --pull --build-arg RUBY_VERSION=${RUBY_VERSION} --build-arg app"
-              sh "BUNDLE_LOCKFILE=activerecord-${RAILS_VERSION} docker-compose run --rm app bundle exec rake db:drop db:create db:migrate"
-              sh "BUNDLE_LOCKFILE=activerecord-${RAILS_VERSION} docker-compose run --rm app bundle exec rake"
+              sh "BUNDLE_LOCKFILE=${LOCKFILE} docker-compose run --rm app bundle exec rake db:drop db:create db:migrate"
+              sh "BUNDLE_LOCKFILE=${LOCKFILE} docker-compose run --rm app bundle exec rake"
             }
           }
         }

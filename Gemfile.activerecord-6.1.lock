@@ -204,8 +204,7 @@ PLATFORMS
 
 DEPENDENCIES
   activerecord (~> 6.1.0)
-  activerecord-pg-extensions (~> 0.4)
-  activesupport (~> 6.1.0)
+  activerecord-pg-extensions (~> 0.4.4)
   bundler
   byebug
   diplomat (~> 2.5.1)
