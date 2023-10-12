@@ -7,6 +7,12 @@ describe SwitchmanInstJobs::Delayed::Worker do
   let(:worker) { Delayed::Worker.new(worker_max_job_count: 1, shard: shard.id) }
 
   describe "workers" do
+    it "doesn't allow workers to be created for shards in other regions" do
+      expect(Switchman::Shard).to receive(:lookup).with(shard.id).and_return(shard)
+      expect(shard).to receive(:in_current_region?).and_return(false)
+      expect { worker }.to raise_error("Cannot run jobs cross-region")
+    end
+
     it "should activate the jobs shard when calling run" do
       expect(Delayed::Job).to receive(:get_and_lock_next_available).once do
         expect(Switchman::Shard.current(Delayed::Backend::ActiveRecord::AbstractJob)).to eq shard

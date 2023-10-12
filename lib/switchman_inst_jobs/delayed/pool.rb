@@ -3,8 +3,17 @@
 module SwitchmanInstJobs
   module Delayed
     module Pool
+      def initialize(*)
+        super
+
+        raise "Cannot run jobs cross-region" unless shards.all?(&:in_current_region?)
+      end
+
       def unlock_orphaned_jobs(worker = nil, pid = nil)
         if worker
+          # this is just a failsafe; it shouldn't be possible
+          return unless worker.shard.in_current_region?
+
           shards = [worker.shard]
         else
           # Since we're not unlocking for a specific worker, look through
@@ -19,12 +28,17 @@ module SwitchmanInstJobs
           # We purposely don't .compact to remove nils here, since if any
           # workers are on the default jobs shard we want to unlock against
           # that shard too.
-          shard_ids = @config[:workers].pluck(:shard).uniq
-          shards = shard_ids.map { |shard_id| ::Delayed::Worker.shard(shard_id) }
+
+          shards = self.shards.select(&:in_current_region?)
         end
         ::Switchman::Shard.with_each_shard(shards, [::Delayed::Backend::ActiveRecord::AbstractJob]) do
           super
         end
+      end
+
+      def shards
+        shard_ids = @config[:workers].pluck(:shard).uniq
+        shard_ids.map { |shard_id| ::Delayed::Worker.shard(shard_id) }
       end
     end
   end
