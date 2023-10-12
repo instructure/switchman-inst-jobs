@@ -10,6 +10,9 @@ module SwitchmanInstJobs
       def initialize(options = {})
         # have to initialize this first, so #shard works
         @config = options
+        # this shouldn't be possible because of the pool check, but just in case
+        raise "Cannot run jobs cross-region" unless shard.in_current_region?
+
         ::Delayed::Worker::HealthCheck.munge_service_name(shard) do
           super
           # ensure we get our own copy of the munged config
