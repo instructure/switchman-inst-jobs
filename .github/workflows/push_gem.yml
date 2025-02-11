@@ -1,12 +1,15 @@
+name: Push to RubyGems
+
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   push:
     name: Push gem to RubyGems.org
     runs-on: ubuntu-latest
+    env:
+      BUNDLE_LOCKFILE: Gemfile.lock
 
     permissions:
       id-token: write

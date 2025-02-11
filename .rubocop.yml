@@ -1,4 +1,5 @@
 require:
+ - rubocop-github-annotation-formatter
  - rubocop-rails
  - rubocop-rake
 
@@ -13,6 +14,7 @@ AllCops:
   Exclude:
     - 'bin/*'
     - 'gemfiles/*'
+    - 'vendor/bundle/**/*'
 
 Bundler/DuplicatedGem:
   Enabled: false
