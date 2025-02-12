@@ -37,6 +37,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rake", "~> 13"
   s.add_development_dependency "rspec", "~> 3.10"
   s.add_development_dependency "rspec-rails", "~> 5.0"
+  s.add_development_dependency "rubocop-github-annotations-formatter", "0.1.0"
   s.add_development_dependency "rubocop-inst", "~> 1"
   s.add_development_dependency "rubocop-rails", "~> 2.10"
   s.add_development_dependency "rubocop-rake", "~> 0.6"
