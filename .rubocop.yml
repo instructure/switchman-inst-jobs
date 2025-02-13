@@ -13,6 +13,7 @@ AllCops:
   Exclude:
     - 'bin/*'
     - 'gemfiles/*'
+    - 'vendor/**/*'
 
 Bundler/DuplicatedGem:
   Enabled: false
