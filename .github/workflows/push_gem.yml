@@ -40,3 +40,5 @@ jobs:
 
       - uses: rubygems/release-gem@v1
         if: steps.version_check.outputs.skip_publish != 'true'
+        with:
+          attestations: "false"
