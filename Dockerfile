@@ -3,7 +3,7 @@ FROM ruby:${RUBY_VERSION}
 
 WORKDIR /app
 
-RUN /bin/bash -lc "gem install bundler -v 2.4.19"
+RUN /bin/bash -lc "gem install bundler -v 2.4.22"
 
 RUN echo "gem: --no-document" >> ~/.gemrc
 
