@@ -12,7 +12,7 @@ Some high-level features this gem provides to make this work:
 
 ## Requirements
 
-* Ruby 2.7+
+* Ruby 3.0+
 * Rails 6.1+
 
 
@@ -70,7 +70,7 @@ docker-compose run --rm app
 ```
 
 This will install the gem in a docker image with all versions of Ruby installed,
-and install all gem dependencies in the Ruby 2.7 set of gems. It will also
+and install all gem dependencies in the Ruby 3.2 set of gems. It will also
 download and spin up a PostgreSQL container for use with specs.
 
 The first build will take a long time, however, docker images and gems are
