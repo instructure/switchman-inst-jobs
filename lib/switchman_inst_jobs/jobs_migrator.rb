@@ -21,7 +21,7 @@ module SwitchmanInstJobs
         @validation_callbacks = []
       end
 
-      def transaction_on(shards, &block)
+      def transaction_on(shards, &)
         return yield if shards.empty?
 
         shard = shards.pop
@@ -29,7 +29,7 @@ module SwitchmanInstJobs
         shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
           ::Delayed::Job.transaction do
             current_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
-              transaction_on(shards, &block)
+              transaction_on(shards, &)
             end
           end
         end
@@ -45,7 +45,7 @@ module SwitchmanInstJobs
           target_shards[target_shard] += [shard.id]
 
           @validation_callbacks&.each do |proc|
-            proc.call(shard: shard, target_shard: ::Switchman::Shard.find(target_shard))
+            proc.call(shard:, target_shard: ::Switchman::Shard.find(target_shard))
           end
         end
 
@@ -171,10 +171,10 @@ module SwitchmanInstJobs
                   # 4) is taken care of here, by leaving next_in_strand alone and
                   # it should execute on the new shard
                   batch_move_jobs(
-                    target_shard: target_shard,
-                    source_shard: source_shard,
+                    target_shard:,
+                    source_shard:,
                     scope: jobs_scope,
-                    batch_size: batch_size
+                    batch_size:
                   ) do |job, new_job|
                     # This ensures jobs enqueued on the old jobs shard run before jobs on the new jobs queue
                     new_job.strand_order_override = job.strand_order_override - 1
@@ -266,10 +266,10 @@ module SwitchmanInstJobs
         shard_map = build_shard_map(scope, source_shard)
         shard_map.each do |(target_shard, source_shard_ids)|
           batch_move_jobs(
-            target_shard: target_shard,
-            source_shard: source_shard,
+            target_shard:,
+            source_shard:,
             scope: scope.where(shard_id: source_shard_ids).where(locked_by: nil),
-            batch_size: batch_size
+            batch_size:
           )
         end
       end
@@ -291,7 +291,7 @@ module SwitchmanInstJobs
       end
 
       def unblock_strand!(strand, new_parallelism: nil)
-        job_scope = ::Delayed::Job.where(strand: strand)
+        job_scope = ::Delayed::Job.where(strand:)
         raise JobsBlockedError if blocked_by_migrator?(job_scope)
 
         ::Delayed::Job.transaction do
@@ -321,7 +321,7 @@ module SwitchmanInstJobs
       end
 
       def unblock_singleton!(singleton)
-        job_scope = ::Delayed::Job.where(strand: nil, singleton: singleton)
+        job_scope = ::Delayed::Job.where(strand: nil, singleton:)
         raise JobsBlockedError if blocked_by_migrator?(job_scope)
 
         ::Delayed::Job.transaction do
@@ -334,7 +334,7 @@ module SwitchmanInstJobs
           if next_in_strand
             0
           elsif id
-            ::Delayed::Job.where(id: id).update_all(next_in_strand: true)
+            ::Delayed::Job.where(id:).update_all(next_in_strand: true)
           end
         end
       end
@@ -403,7 +403,7 @@ module SwitchmanInstJobs
             @before_move_callbacks&.each do |proc|
               proc.call(
                 old_job: job,
-                new_job: new_job
+                new_job:
               )
             end
             new_job
