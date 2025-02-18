@@ -21,7 +21,7 @@ Gem::Specification.new do |s|
     "rubygems_mfa_required" => "true"
   }
 
-  s.required_ruby_version = ">= 3.0"
+  s.required_ruby_version = ">= 3.1"
 
   s.add_dependency "inst-jobs", ">= 2.4.9", "< 4.0"
   s.add_dependency "parallel", ">= 1.19"
