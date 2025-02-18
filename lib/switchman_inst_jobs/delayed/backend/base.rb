@@ -21,7 +21,7 @@ module SwitchmanInstJobs
             ::Switchman::Shard.periodic_clear_shard_cache
             current_shard = options[:current_shard] || ::Switchman::Shard.current
             enqueue_options = options.merge(
-              current_shard: current_shard
+              current_shard:
             )
             enqueue_job = -> { ::GuardRail.activate(:primary) { super(object, **enqueue_options) } }
 

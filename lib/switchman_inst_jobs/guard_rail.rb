@@ -3,7 +3,7 @@
 module SwitchmanInstJobs
   module GuardRail
     module ClassMethods
-      def activate(env, &block)
+      def activate(env, &)
         if ::ActiveRecord::Migration.open_migrations.positive?
           yield
         else
