@@ -2,6 +2,7 @@
 
 require File.expand_path("boot", __dir__)
 
+require "logger"
 require "rails/all"
 Bundler.require(*Rails.groups)
 

@@ -25,7 +25,7 @@ Gem::Specification.new do |s|
 
   s.add_dependency "inst-jobs", ">= 2.4.9", "< 4.0"
   s.add_dependency "parallel", ">= 1.19"
-  s.add_dependency "railties", ">= 7.0", "< 7.2"
+  s.add_dependency "railties", ">= 7.0", "< 8.0"
   s.add_dependency "switchman", ">= 3.5.14", "< 5.0"
 
   s.add_development_dependency "bundler"
@@ -36,10 +36,10 @@ Gem::Specification.new do |s|
   s.add_development_dependency "pry", "~> 0"
   s.add_development_dependency "rake", "~> 13"
   s.add_development_dependency "rspec", "~> 3.10"
-  s.add_development_dependency "rspec-rails", "~> 5.0"
+  s.add_development_dependency "rspec-rails", "~> 7.0"
   s.add_development_dependency "rubocop-inst", "~> 1"
   s.add_development_dependency "rubocop-rails", "~> 2.10"
   s.add_development_dependency "rubocop-rake", "~> 0.6"
-  s.add_development_dependency "rubocop-rspec", "~> 2.4"
+  s.add_development_dependency "rubocop-rspec", "~> 3.0"
   s.add_development_dependency "simplecov", "~> 0.21"
 end

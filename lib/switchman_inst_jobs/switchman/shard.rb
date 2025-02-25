@@ -100,7 +100,7 @@ module SwitchmanInstJobs
 
         def periodic_clear_shard_cache
           # TODO: make this configurable
-          @timed_cache ||= TimedCache.new(-> { 60.to_i.seconds.ago }) do
+          @timed_cache ||= TimedCache.new(-> { 60.seconds.ago }) do
             ::Switchman::Shard.clear_cache
           end
           @timed_cache.clear
