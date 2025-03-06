@@ -2,7 +2,7 @@
 
 ENV["RAILS_ENV"] ||= "test"
 
-if /^2\.6/ =~ RUBY_VERSION && ENV.fetch("BUNDLE_GEMFILE", nil).include?("6.1") # Limit coverage to one build
+if /^3\.1/ =~ RUBY_VERSION && ENV.fetch("BUNDLE_GEMFILE", nil).include?("7.0") # Limit coverage to one build
   require "simplecov"
 
   SimpleCov.start do

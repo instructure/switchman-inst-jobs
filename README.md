@@ -13,7 +13,7 @@ Some high-level features this gem provides to make this work:
 ## Requirements
 
 * Ruby 3.1+
-* Rails 6.1+
+* Rails 7.0+
 
 
 ## Installation
