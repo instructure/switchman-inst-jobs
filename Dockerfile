@@ -8,4 +8,4 @@ RUN /bin/bash -lc "gem install bundler -v 2.5.23"
 RUN echo "gem: --no-document" >> ~/.gemrc
 
 COPY . /app
-RUN /bin/bash -lc "bundle install --jobs 5"
+RUN /bin/bash -lc "bundle _2.5.23_ install --jobs 5"
