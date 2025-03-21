@@ -48,9 +48,7 @@ module SwitchmanInstJobs
             end
           end
 
-          def configured_shard_ids
-            ::SwitchmanInstJobs::Delayed::Settings.configured_shard_ids
-          end
+          delegate :configured_shard_ids, to: :"::SwitchmanInstJobs::Delayed::Settings"
 
           def processes_locked_locally
             shard_ids = configured_shard_ids

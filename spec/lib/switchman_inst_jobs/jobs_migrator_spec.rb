@@ -401,7 +401,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       5.times { Kernel.delay(strand: "strand1").sleep(0.1) }
     end
     Delayed::Job.where(shard_id: shard1.id, strand: "strand1").next_in_strand_order.first
-                .update(locked_by: "specs", locked_at: DateTime.now)
+                .update(locked_by: "specs", locked_at: Time.now.utc)
 
     expect(Delayed::Job.where(strand: "strand1").count).to eq 5
     described_class.run
@@ -422,7 +422,7 @@ describe SwitchmanInstJobs::JobsMigrator do
 
   it "should create a blocker singleton if a strandless singleton is currently running" do
     activate_source_shard do
-      Kernel.delay(locked_at: DateTime.now, locked_by: "w1", singleton: "singleton1").sleep(0.1)
+      Kernel.delay(locked_at: Time.now.utc, locked_by: "w1", singleton: "singleton1").sleep(0.1)
       Kernel.delay(singleton: "singleton1").sleep(0.1)
     end
 
