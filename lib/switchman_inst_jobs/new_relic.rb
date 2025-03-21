@@ -6,14 +6,14 @@ module SwitchmanInstJobs
       module NewRelicJobInvoker
         include ::NewRelic::Agent::Instrumentation::ControllerInstrumentation if defined?(::NewRelic)
 
-        def invoke_job(*args, &)
+        def invoke_job(...)
           options = {
             category: NR_TRANSACTION_CATEGORY,
             path: tag
           }
 
           perform_action_with_newrelic_trace(options) do
-            super(*args, &)
+            super(...)
           end
         end
       end
