@@ -190,7 +190,7 @@ module SwitchmanInstJobs
         all_scope = ::Delayed::Job.shard(source_shard).where("strand IS NOT NULL OR singleton IS NOT NULL")
 
         singleton_blocker_additional_kwargs = {
-          locked_at: DateTime.now,
+          locked_at: Time.zone.now,
           locked_by: ::Delayed::Backend::Base::ON_HOLD_BLOCKER
         }
 
