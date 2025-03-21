@@ -1,4 +1,4 @@
-require:
+plugins:
  - rubocop-rails
  - rubocop-rake
 
@@ -16,6 +16,9 @@ AllCops:
     - 'vendor/**/*'
 
 Bundler/DuplicatedGem:
+  Enabled: false
+
+Gemspec/DevelopmentDependencies:
   Enabled: false
 
 Layout/LineLength:

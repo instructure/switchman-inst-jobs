@@ -37,7 +37,7 @@ module SwitchmanInstJobs
 
       def migrate_shards(shard_map)
         source_shards = Set[]
-        target_shards = Hash.new([])
+        target_shards = Hash.new([].freeze)
         shard_map.each do |(shard, target_shard)|
           shard = ::Switchman::Shard.find(shard) unless shard.is_a?(::Switchman::Shard)
           source_shards << shard.delayed_jobs_shard.id
@@ -190,7 +190,7 @@ module SwitchmanInstJobs
         all_scope = ::Delayed::Job.shard(source_shard).where("strand IS NOT NULL OR singleton IS NOT NULL")
 
         singleton_blocker_additional_kwargs = {
-          locked_at: DateTime.now,
+          locked_at: Time.now.utc,
           locked_by: ::Delayed::Backend::Base::ON_HOLD_BLOCKER
         }
 
