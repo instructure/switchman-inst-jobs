@@ -60,7 +60,7 @@ describe SwitchmanInstJobs::Engine do
           Kernel.delay(strand: "strand1",
                        queue: "test1",
                        locked_by: "strand blocker",
-                       locked_at: DateTime.now,
+                       locked_at: Time.now.utc,
                        source: "JobsMigrator::StrandBlocker").sleep(0.1)
           Delayed::Job.first.update!(next_in_strand: false)
 
@@ -99,7 +99,7 @@ describe SwitchmanInstJobs::Engine do
           Kernel.delay(singleton: "singleton1",
                        queue: "test1",
                        locked_by: "singleton blocker",
-                       locked_at: DateTime.now,
+                       locked_at: Time.now.utc,
                        source: "JobsMigrator::StrandBlocker").sleep(0.1)
           Delayed::Job.first.update!(next_in_strand: false)
 
