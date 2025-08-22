@@ -230,14 +230,16 @@ module SwitchmanInstJobs
         blocked_shard_ids = blocked_shards.pluck(:id)
         query = lambda { |column, scope|
           ::Delayed::Job
-            .where(id: ::Delayed::Job.select("DISTINCT ON (#{column}) id")
-              .where(scope)
+            .where(id: ::Delayed::Job
+              .with(all_col: ::Delayed::Job.and(scope).distinct.select(column))
+              .with(blocked_col: ::Delayed::Job.from("all_col").select(column).where.not(
+                ::Delayed::Job.select(1)
+                  .where(next_in_strand: true).or(::Delayed::Job.where(source: "JobsMigrator::StrandBlocker"))
+                  .where("#{column} = all_col.#{column}").arel.exists
+              ))
+              .select("DISTINCT ON (#{column}) id")
               .where.not(shard_id: blocked_shard_ids)
-              .where(
-                ::Delayed::Job.select(1).from("#{::Delayed::Job.quoted_table_name} dj2")
-                .where("dj2.next_in_strand = true OR dj2.source = 'JobsMigrator::StrandBlocker'")
-                .where("dj2.#{column} = delayed_jobs.#{column}").arel.exists.not
-              )
+              .where({ column => ::Delayed::Job.from("blocked_col").select(column) })
               .order(column, :strand_order_override, :id)).limit(batch_size)
         }
 
@@ -249,12 +251,13 @@ module SwitchmanInstJobs
           # batches
 
           loop do
-            break if query.call(:strand, "strand IS NOT NULL").update_all(next_in_strand: true).zero?
+            break if query.call(:strand, ::Delayed::Job.where.not(strand: nil)).update_all(next_in_strand: true).zero?
           end
 
           loop do
             break if query.call(:singleton,
-                                "strand IS NULL AND singleton IS NOT NULL").update_all(next_in_strand: true).zero?
+                                ::Delayed::Job.where(strand: nil)
+                                .where.not(singleton: nil)).update_all(next_in_strand: true).zero?
           end
         end
       end
