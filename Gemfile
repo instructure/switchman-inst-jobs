@@ -25,15 +25,6 @@ gem "rubocop-rspec", "~> 3.0", require: false
 gem "simplecov", "~> 0.21", require: false
 gem "zeitwerk", "~> 2.6", "< 2.7", require: false
 
-lockfile "activerecord-7.0" do
-  gem "activerecord", "~> 7.0.0"
-  gem "base64", "~> 0.1", require: RUBY_VERSION >= "3.4.0"
-  gem "bigdecimal", "~> 3.1", require: RUBY_VERSION >= "3.4.0"
-  gem "drb", "~> 2.1", require: RUBY_VERSION >= "3.4.0"
-  gem "mutex_m", "~> 0.1", require: RUBY_VERSION >= "3.4.0"
-  gem "railties", "~> 7.0.0"
-end
-
 lockfile "activerecord-7.1" do
   gem "activerecord", "~> 7.1.0"
   gem "activerecord-pg-extensions", "~> 0.5"

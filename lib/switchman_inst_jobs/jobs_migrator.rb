@@ -234,7 +234,7 @@ module SwitchmanInstJobs
               .with(all_col: ::Delayed::Job.and(scope).distinct.select(column))
               .with(blocked_col: ::Delayed::Job.from("all_col").select(column).where.not(
                 ::Delayed::Job.select(1)
-                  .where(next_in_strand: true).or(::Delayed::Job.where(source: 'JobsMigrator::StrandBlocker'))
+                  .where(next_in_strand: true).or(::Delayed::Job.where(source: "JobsMigrator::StrandBlocker"))
                   .where("#{column} = all_col.#{column}").arel.exists
               ))
               .select("DISTINCT ON (#{column}) id")
@@ -256,7 +256,8 @@ module SwitchmanInstJobs
 
           loop do
             break if query.call(:singleton,
-                ::Delayed::Job.where(strand: nil).where.not(singleton: nil)).update_all(next_in_strand: true).zero?
+                                ::Delayed::Job.where(strand: nil)
+                                .where.not(singleton: nil)).update_all(next_in_strand: true).zero?
           end
         end
       end
