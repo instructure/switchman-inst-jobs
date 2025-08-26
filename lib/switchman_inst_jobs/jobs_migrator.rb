@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "set"
 require "parallel"
 
 module SwitchmanInstJobs
@@ -350,8 +349,8 @@ module SwitchmanInstJobs
 
       private
 
-      def create_blocker_job(**kwargs)
-        first_job = ::Delayed::Job.create!(**kwargs, next_in_strand: false)
+      def create_blocker_job(**)
+        first_job = ::Delayed::Job.create!(**, next_in_strand: false)
         first_job.payload_object = ::Delayed::PerformableMethod.new(Kernel, :sleep, args: [0])
         first_job.tag = "Kernel.sleep"
         first_job.source = "JobsMigrator::StrandBlocker"

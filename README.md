@@ -12,7 +12,7 @@ Some high-level features this gem provides to make this work:
 
 ## Requirements
 
-* Ruby 3.1+
+* Ruby 3.2+
 * Rails 7.0+
 
 
