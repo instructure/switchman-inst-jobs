@@ -39,7 +39,7 @@ module SwitchmanInstJobs
         source_shards = Hash.new([].freeze)
         target_shards = Hash.new([].freeze)
         # Also add any incomplete moves to the source shards to ensure we clean up appropriately
-        ::Switchman::Shard.where.not(previous_delayed_jobs_shard_id: nil).each do |shard|
+        ::Switchman::Shard.where.not(previous_delayed_jobs_shard_id: nil).find_each do |shard|
           effective_map[shard.id] ||= shard.delayed_jobs_shard.id
         end
         effective_map.each do |(shard, target_shard)|
@@ -77,11 +77,11 @@ module SwitchmanInstJobs
         ::Switchman::Shard.clear_cache
         # rubocop:disable Style/CombinableLoops
         # We first migrate strands so that we can stop blocking strands before we migrate unstranded jobs
-        source_shards.keys.each do |s|
+        source_shards.each_key do |s|
           ::Switchman::Shard.lookup(s).activate(::Delayed::Backend::ActiveRecord::AbstractJob) { migrate_strands }
         end
 
-        source_shards.keys.each do |s|
+        source_shards.each_key do |s|
           ::Switchman::Shard.lookup(s).activate(::Delayed::Backend::ActiveRecord::AbstractJob) { migrate_everything }
         end
         ensure_unblock_stranded_for(effective_map.map(&:first))

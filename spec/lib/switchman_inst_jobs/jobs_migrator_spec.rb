@@ -537,6 +537,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       allow(described_class).to receive(:migrate_everything).with(no_args) do
         @times_called += 1
         raise "test failure" if @times_called == 1
+
         original_method.call
       end
     end
@@ -553,7 +554,7 @@ describe SwitchmanInstJobs::JobsMigrator do
       expect(Delayed::Job.count).to eq 3
       expect { described_class.migrate_shards({ shard1 => shard1 }) }.not_to raise_error
       expect(Delayed::Job.count).to eq 0
-      
+
       activate_target_shard do
         expect(Delayed::Job.count).to eq 3
       end
@@ -567,17 +568,17 @@ describe SwitchmanInstJobs::JobsMigrator do
 
       shard1.delayed_jobs_shard_id = Switchman::Shard.default.id
       shard1.save!
-      expect(::Switchman::Shard.where.not(previous_delayed_jobs_shard_id: nil).count).to eq 0
+      expect(Switchman::Shard.where.not(previous_delayed_jobs_shard_id: nil).count).to eq 0
       expect { described_class.migrate_shards({ shard1 => shard1 }) }.to raise_error("test failure")
       expect(Delayed::Job.count).to eq 3
-      expect(::Switchman::Shard.where.not(previous_delayed_jobs_shard_id: nil).count).to eq 1
+      expect(Switchman::Shard.where.not(previous_delayed_jobs_shard_id: nil).count).to eq 1
       expect { described_class.migrate_shards({}) }.not_to raise_error
       expect(Delayed::Job.count).to eq 0
-      
+
       activate_target_shard do
         expect(Delayed::Job.count).to eq 3
       end
-      expect(::Switchman::Shard.where.not(previous_delayed_jobs_shard_id: nil).count).to eq 0
+      expect(Switchman::Shard.where.not(previous_delayed_jobs_shard_id: nil).count).to eq 0
     end
   end
 end
