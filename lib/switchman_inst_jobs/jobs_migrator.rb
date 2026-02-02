@@ -39,17 +39,17 @@ module SwitchmanInstJobs
         source_shards = Hash.new([].freeze)
         target_shards = Hash.new([].freeze)
         # Also add any incomplete moves to the source shards to ensure we clean up appropriately
-        ::Switchman::Shard.where.not(previous_delayed_jobs_shard_id: nil).find_each do |shard|
+        ::Switchman::Shard.where.not(migrate_from_delayed_jobs_shard_id: nil).find_each do |shard|
           effective_map[shard.id] ||= shard.delayed_jobs_shard.id
         end
         effective_map.each do |(shard, target_shard)|
           shard = ::Switchman::Shard.find(shard) unless shard.is_a?(::Switchman::Shard)
           target_shard = target_shard.try(:id) || target_shard
           # if a move was interrupted, the new shard is already set as the delayed_jobs_shard
-          # but we still have the old shard stored in previous_delayed_jobs_shard and should
+          # but we still have the old shard stored in migrate_from_delayed_jobs_shard and should
           # act as if we are moving from there in the first place
-          if shard.previous_delayed_jobs_shard_id && shard.delayed_jobs_shard.id == target_shard
-            source_shards[shard.previous_delayed_jobs_shard_id] += [shard.id]
+          if shard.migrate_from_delayed_jobs_shard_id && shard.delayed_jobs_shard.id == target_shard
+            source_shards[shard.migrate_from_delayed_jobs_shard_id] += [shard.id]
           else
             source_shards[shard.delayed_jobs_shard.id] += [shard.id]
           end
@@ -63,7 +63,7 @@ module SwitchmanInstJobs
         ::Switchman::Shard.transaction do
           # Do the updates in batches and then just clear redis instead of clearing them one at a time
           source_shards.each do |source_shard, shards|
-            updates = { previous_delayed_jobs_shard_id: source_shard }
+            updates = { migrate_from_delayed_jobs_shard_id: source_shard }
             ::Switchman::Shard.where(id: shards).update_all(updates)
           end
           target_shards.each do |target_shard, shards|
@@ -86,7 +86,7 @@ module SwitchmanInstJobs
         end
         ensure_unblock_stranded_for(effective_map.map(&:first))
         # rubocop:enable Style/CombinableLoops
-        ::Switchman::Shard.where(id: effective_map.map(&:first)).update_all(previous_delayed_jobs_shard_id: nil)
+        ::Switchman::Shard.where(id: effective_map.map(&:first)).update_all(migrate_from_delayed_jobs_shard_id: nil)
       end
 
       # if :migrate_strands ran on any shards that fell into scenario 1, then
