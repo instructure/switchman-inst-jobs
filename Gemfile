@@ -11,7 +11,7 @@ gemspec
 
 gem "bundler", require: false
 gem "byebug", require: false
-gem "diplomat", "~> 2.5.1", require: false
+gem "diplomat", "~> 2.6.0", require: false
 gem "newrelic_rpm", require: false
 gem "pg", "~> 1.0", require: false
 gem "pry", "~> 0", require: false
