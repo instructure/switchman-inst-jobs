@@ -22,7 +22,7 @@ module SwitchmanInstJobs
       # Adapted from hold/unhold methods in base delayed jobs base
       # Wait is required to be able to safely move jobs
       def hold_jobs!(wait: false)
-        ::Switchman::Shard.where(id: self).hold_jobs!(wait: wait)
+        ::Switchman::Shard.where(id: self).hold_jobs!(wait:)
       end
 
       def unhold_jobs!
@@ -98,20 +98,6 @@ module SwitchmanInstJobs
           end
         end
 
-        # Group the given shards by the shard their jobs live on, returning a
-        # hash of delayed_jobs_shard => [shard_id, ...]
-        private def shards_by_jobs_shard(shards)
-          shards.group_by(&:delayed_jobs_shard).transform_values { |group| group.map(&:id) }
-        end
-
-        private def lock_jobs_for_hold(shard_ids)
-          ::Delayed::Job.where(locked_at: nil, shard_id: shard_ids).in_batches(of: 10_000).update_all(
-            locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY,
-            locked_at: ::Delayed::Job.db_time_now,
-            attempts: ::Delayed::Backend::Base::ON_HOLD_COUNT
-          )
-        end
-
         def clear_cache
           super
           remove_instance_variable(:@delayed_jobs_shards) if instance_variable_defined?(:@delayed_jobs_shards)
@@ -169,6 +155,22 @@ module SwitchmanInstJobs
           return ::Switchman::Shard.where(id: ::Switchman::Shard.default.id) if @jobs_scope_empty
 
           ::Switchman::Shard.merge(scope)
+        end
+
+        private
+
+        # Group the given shards by the shard their jobs live on, returning a
+        # hash of delayed_jobs_shard => [shard_id, ...]
+        def shards_by_jobs_shard(shards)
+          shards.group_by(&:delayed_jobs_shard).transform_values { |group| group.map(&:id) }
+        end
+
+        def lock_jobs_for_hold(shard_ids)
+          ::Delayed::Job.where(locked_at: nil, shard_id: shard_ids).in_batches(of: 10_000).update_all(
+            locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY,
+            locked_at: ::Delayed::Job.db_time_now,
+            attempts: ::Delayed::Backend::Base::ON_HOLD_COUNT
+          )
         end
       end
     end
