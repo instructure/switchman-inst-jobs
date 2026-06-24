@@ -53,7 +53,7 @@ module SwitchmanInstJobs
           # threshold to ensure that all new jobs are now being enqueued
           # locked
           Rails.logger.debug("Waiting for caches to clear")
-          sleep(65) if wait
+          sleep(65) if wait && wait_for_caches
 
           shards_by_jobs_shard(shards).each do |jobs_shard, shard_ids|
             jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
