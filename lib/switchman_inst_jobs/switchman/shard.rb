@@ -22,56 +22,96 @@ module SwitchmanInstJobs
       # Adapted from hold/unhold methods in base delayed jobs base
       # Wait is required to be able to safely move jobs
       def hold_jobs!(wait: false)
-        self.jobs_held = true
-        save! if changed?
-        delayed_jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
-          lock_jobs_for_hold
-        end
-        return unless wait
-
-        delayed_jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
-          while ::Delayed::Job.where(shard_id: id)
-                              .where.not(locked_at: nil)
-                              .where.not(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY).exists?
-            sleep 10
-            lock_jobs_for_hold
-          end
-        end
+        ::Switchman::Shard.where(id: self).hold_jobs!(wait: wait)
       end
 
       def unhold_jobs!
-        self.jobs_held = false
-        if changed?
-          save!
-          # Wait a little over the 60 second in-process shard cache clearing
-          # threshold to ensure that all new jobs are now being enqueued
-          # unlocked
-          Rails.logger.debug("Waiting for caches to clear")
-          sleep(65)
-        end
-        delayed_jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
-          ::Delayed::Job.where(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY, shard_id: id)
-                        .in_batches(of: 10_000)
-                        .update_all(
-                          locked_by: nil,
-                          locked_at: nil,
-                          attempts: 0,
-                          failed_at: nil
-                        )
-        end
-      end
-
-      private
-
-      def lock_jobs_for_hold
-        ::Delayed::Job.where(locked_at: nil, shard_id: id).in_batches(of: 10_000).update_all(
-          locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY,
-          locked_at: ::Delayed::Job.db_time_now,
-          attempts: ::Delayed::Backend::Base::ON_HOLD_COUNT
-        )
+        ::Switchman::Shard.where(id: self).unhold_jobs!
       end
 
       module ClassMethods
+        # Adapted from hold/unhold methods in base delayed jobs base
+        # Wait is required to be able to safely move jobs
+        def hold_jobs!(wait: false)
+          shards = all.to_a
+          wait_for_caches = false
+          shards.each do |shard|
+            shard.jobs_held = true
+            if shard.changed?
+              shard.save!
+              wait_for_caches = true if wait
+            end
+          end
+          shards_by_jobs_shard(shards).each do |jobs_shard, shard_ids|
+            jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+              lock_jobs_for_hold(shard_ids)
+            end
+          end
+          return unless wait
+
+          # Wait a little over the 60 second in-process shard cache clearing
+          # threshold to ensure that all new jobs are now being enqueued
+          # locked
+          Rails.logger.debug("Waiting for caches to clear")
+          sleep(65) if wait
+
+          shards_by_jobs_shard(shards).each do |jobs_shard, shard_ids|
+            jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+              while ::Delayed::Job.where(shard_id: shard_ids)
+                                  .where.not(locked_at: nil)
+                                  .where.not(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY).exists?
+                sleep 10
+                lock_jobs_for_hold(shard_ids)
+              end
+            end
+          end
+        end
+
+        def unhold_jobs!
+          shards = all.to_a
+          waited = false
+          shards.each do |shard|
+            shard.jobs_held = false
+            next unless shard.changed?
+
+            shard.save!
+            next if waited
+
+            # Wait a little over the 60 second in-process shard cache clearing
+            # threshold to ensure that all new jobs are now being enqueued
+            # unlocked
+            Rails.logger.debug("Waiting for caches to clear")
+            sleep(65)
+            waited = true
+          end
+          shards_by_jobs_shard(shards).each do |jobs_shard, shard_ids|
+            jobs_shard.activate(::Delayed::Backend::ActiveRecord::AbstractJob) do
+              ::Delayed::Job.where(locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY, shard_id: shard_ids)
+                            .in_batches(of: 10_000)
+                            .update_all(
+                              locked_by: nil,
+                              locked_at: nil,
+                              attempts: 0,
+                              failed_at: nil
+                            )
+            end
+          end
+        end
+
+        # Group the given shards by the shard their jobs live on, returning a
+        # hash of delayed_jobs_shard => [shard_id, ...]
+        private def shards_by_jobs_shard(shards)
+          shards.group_by(&:delayed_jobs_shard).transform_values { |group| group.map(&:id) }
+        end
+
+        private def lock_jobs_for_hold(shard_ids)
+          ::Delayed::Job.where(locked_at: nil, shard_id: shard_ids).in_batches(of: 10_000).update_all(
+            locked_by: ::Delayed::Backend::Base::ON_HOLD_LOCKED_BY,
+            locked_at: ::Delayed::Job.db_time_now,
+            attempts: ::Delayed::Backend::Base::ON_HOLD_COUNT
+          )
+        end
+
         def clear_cache
           super
           remove_instance_variable(:@delayed_jobs_shards) if instance_variable_defined?(:@delayed_jobs_shards)

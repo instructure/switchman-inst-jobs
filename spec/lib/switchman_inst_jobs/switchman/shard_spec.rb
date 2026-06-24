@@ -81,4 +81,43 @@ describe SwitchmanInstJobs::Switchman::Shard do
       expect(job.reload.locked_by).to be_nil
     end
   end
+
+  describe ".hold_jobs!" do
+    it "locks existing jobs across a relation of shards" do
+      job1 = shard.activate { Kernel.delay(ignore_transaction: true).sleep }
+      job2 = jobs_shard.activate { Kernel.delay(ignore_transaction: true).sleep }
+
+      Switchman::Shard.where(id: [shard, jobs_shard]).hold_jobs!
+
+      expect(job1.reload.locked_by).to eq Delayed::Backend::Base::ON_HOLD_LOCKED_BY
+      expect(job2.reload.locked_by).to eq Delayed::Backend::Base::ON_HOLD_LOCKED_BY
+      expect(shard.reload.jobs_held).to be true
+      expect(jobs_shard.reload.jobs_held).to be true
+    end
+
+    it "only holds jobs for shards in the relation" do
+      held = shard.activate { Kernel.delay(ignore_transaction: true).sleep }
+      other = jobs_shard.activate { Kernel.delay(ignore_transaction: true).sleep }
+
+      Switchman::Shard.where(id: shard).hold_jobs!
+
+      expect(held.reload.locked_by).to eq Delayed::Backend::Base::ON_HOLD_LOCKED_BY
+      expect(other.reload.locked_by).to be_nil
+      expect(jobs_shard.reload.jobs_held).to be false
+    end
+  end
+
+  describe ".unhold_jobs!" do
+    it "unholds existing jobs across a relation of shards" do
+      job1 = shard.activate { Kernel.delay(ignore_transaction: true).sleep }
+      job2 = jobs_shard.activate { Kernel.delay(ignore_transaction: true).sleep }
+      job1.hold!
+      job2.hold!
+
+      Switchman::Shard.where(id: [shard, jobs_shard]).unhold_jobs!
+
+      expect(job1.reload.locked_by).to be_nil
+      expect(job2.reload.locked_by).to be_nil
+    end
+  end
 end
