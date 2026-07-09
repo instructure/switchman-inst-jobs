@@ -22,7 +22,7 @@ describe SwitchmanInstJobs::Delayed::MessageSending do
   context "unsharded project" do
     let(:project) { Project.create! }
 
-    include_examples "batch jobs sharding"
+    it_behaves_like "batch jobs sharding"
   end
 
   context "sharded project" do
@@ -30,6 +30,6 @@ describe SwitchmanInstJobs::Delayed::MessageSending do
 
     let(:project) { @shard1.activate { Project.create! } }
 
-    include_examples "batch jobs sharding"
+    it_behaves_like "batch jobs sharding"
   end
 end

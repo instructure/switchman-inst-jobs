@@ -67,6 +67,7 @@ describe SwitchmanInstJobs::Switchman::Shard do
 
   describe "#hold_jobs!" do
     it "locks existing jobs" do
+      allow(Switchman::Shard).to receive(:sleep).with(65).and_return(true) # don't actually sleep
       job = Kernel.delay(ignore_transaction: true).sleep
       Switchman::Shard.default.hold_jobs!(wait: true)
       expect(job.reload.locked_by).to eq Delayed::Backend::Base::ON_HOLD_LOCKED_BY

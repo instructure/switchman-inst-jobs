@@ -7,9 +7,7 @@ module SwitchmanInstJobs
   cattr_accessor :delayed_jobs_shard_fallback
 
   def self.initialize_active_record
-    ::ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.prepend(
-      ActiveRecord::ConnectionAdapters::PostgreSQLAdapter
-    )
+    ActiveSupport.on_load(:active_record_postgresqladapter) { prepend ActiveRecord::ConnectionAdapters::PostgreSQLAdapter }
   end
 
   def self.initialize_inst_jobs

@@ -20,8 +20,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby: ['3.2', '3.3', '3.4']
-        lockfile: ['Gemfile.activerecord-7.1.lock', 'Gemfile.activerecord-7.2.lock', 'Gemfile.lock']
+        ruby: ['3.3', '3.4']
+        lockfile: ['Gemfile.activerecord-7.2.lock', 'Gemfile.activerecord-8.0.lock', 'Gemfile.lock']
 
     services:
       postgres:
@@ -63,7 +63,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.2
+          ruby-version: 3.4
           bundler-cache: true
 
       - name: Run RuboCop

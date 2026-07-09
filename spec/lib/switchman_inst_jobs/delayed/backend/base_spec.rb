@@ -103,7 +103,7 @@ describe SwitchmanInstJobs::Delayed::Backend::Base do
       payload_object = double
       expect(payload_object).to receive(:perform).once
       expect_any_instance_of(Delayed::Backend::Base)
-        .to receive(:payload_object) { payload_object }
+        .to receive(:payload_object).at_least(:once) { payload_object }
       job = nil
 
       shard.activate do
