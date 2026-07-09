@@ -18,8 +18,6 @@ if /^3\.1/ =~ RUBY_VERSION && ENV.fetch("BUNDLE_GEMFILE", nil).include?("7.0") #
   end
 end
 
-require "pry"
-
 require File.expand_path("dummy/config/environment", __dir__)
 require "rspec/rails"
 require "switchman/r_spec_helper"

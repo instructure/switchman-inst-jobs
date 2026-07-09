@@ -7,11 +7,11 @@ module SwitchmanInstJobs
         self
       end
 
-      def jobs_held
+      def jobs_held # rubocop:disable Naming/PredicateMethod
         false
       end
 
-      def block_stranded
+      def block_stranded # rubocop:disable Naming/PredicateMethod
         false
       end
     end

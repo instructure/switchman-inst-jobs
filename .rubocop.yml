@@ -1,6 +1,7 @@
 plugins:
  - rubocop-rails
  - rubocop-rake
+ - rubocop-rspec_rails
 
 inherit_gem:
   rubocop-inst:
@@ -8,8 +9,8 @@ inherit_gem:
   - rubocop-rspec.yml
 
 AllCops:
-  TargetRailsVersion: 7.0
-  TargetRubyVersion: 3.2
+  TargetRailsVersion: 7.2
+  TargetRubyVersion: 3.3
   Exclude:
     - 'bin/*'
     - 'gemfiles/*'

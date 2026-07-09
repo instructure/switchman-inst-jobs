@@ -21,10 +21,9 @@ Gem::Specification.new do |s|
     "rubygems_mfa_required" => "true"
   }
 
-  s.required_ruby_version = ">= 3.2"
+  s.required_ruby_version = ">= 3.3"
 
   s.add_dependency "inst-jobs", ">= 2.4.9", "< 4.0"
-  s.add_dependency "parallel", ">= 1.19"
-  s.add_dependency "railties", ">= 7.0", "< 8.1"
-  s.add_dependency "switchman", ">= 3.5.14", "< 5.0"
+  s.add_dependency "railties", ">= 7.2", "< 8.2"
+  s.add_dependency "switchman", "~> 4.3"
 end
