@@ -275,6 +275,7 @@ PLATFORMS
 
 DEPENDENCIES
   activerecord (~> 7.2.0)
+  benchmark (~> 0.4)
   diplomat (~> 2.5)
   newrelic_rpm
   pg (~> 1.0)
