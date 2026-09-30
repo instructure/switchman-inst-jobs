@@ -9,6 +9,7 @@ Plugin.send(:load_plugin, "bundler-multilock")
 
 gemspec
 
+gem "benchmark", "~> 0.4", require: false
 gem "diplomat", "~> 2.5", require: false
 gem "newrelic_rpm", require: false
 gem "pg", "~> 1.0", require: false
