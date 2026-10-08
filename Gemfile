@@ -2,10 +2,8 @@
 
 source "https://rubygems.org"
 
-plugin "bundler-multilock", "1.4.0"
-return unless Plugin.installed?("bundler-multilock")
-
-Plugin.send(:load_plugin, "bundler-multilock")
+plugin "bundler-multilock", "~> 2.0.0.beta1", github: "ccutrer/bundler-multilock", branch: "bundler-4.1"
+return unless Plugin.loaded?("bundler-multilock")
 
 gemspec
 
